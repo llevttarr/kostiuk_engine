@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "splataudit"
+version = "0.0.1"
+description = "Few-shot 3DGS audit: initialization, pose provenance, test-split geometry"
+requires-python = ">=3.10"
+
+dependencies = [
+  "torch>=2.4",
+  "gsplat>=1.4",
+  "numpy>=1.26",
+  "scipy>=1.11",
+  "opencv-python>=4.9",
+  "pyyaml>=6.0",
+  "pandas>=2.2",
+  "torchmetrics>=1.4",
+  "torchvision>=0.19",
+  "pycolmap>=3.10",
+  "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+priors = ["transformers>=4.44"]
+dev = ["pytest>=8.2", "ruff>=0.6"]
+
+[project.scripts]
+splataudit = "splataudit.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/splataudit"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: needs a GPU"]

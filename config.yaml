@@ -1,0 +1,24 @@
+seed: 0
+n_views: 3
+dataset: #TODO
+scenes: [] #TODO
+
+init: random
+method: vanilla
+protocol: interp
+
+train:
+  iterations: 30000
+  lambda_dssim: 0.2
+  sh_degree: 3
+  densify_every: 100
+  densify_until: 15000
+  grad_threshold: 0.0002
+  opacity_reset_every: 3000
+  prune_opacity: 0.005
+
+eval:
+  metrics: [] # TODO
+
+depth_lambda: 0.05
+drop_rate: 0.1
