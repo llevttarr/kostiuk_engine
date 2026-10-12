@@ -18,3 +18,4 @@ external/*
 !.vscode/settings.json
 !.vscode/extensions.json
 .DS_Store
+*.pdf

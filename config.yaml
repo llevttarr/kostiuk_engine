@@ -1,12 +1,20 @@
 seed: 0
-n_views: 3
-dataset: #TODO
-scenes: [] #TODO
+n_views: 3              # 3 or 9 — training view count
+dataset: llff           # llff | dtu | mip360
+data_root: data/        # root directory: data/<dataset>/<scene>/
+scenes: []              # list of scene names to run; [] = all scenes for the dataset
 
-init: random
-method: vanilla
-protocol: interp
+# ── Experiment cube ───────────────────────────────────────────────────────────
+init:     colmap        # random | colmap | dust3r
+method:   vanilla       # vanilla | fsgs | dngaussian | dropgaussian | cross_view_gating
+protocol: interp        # interp | sector
 
+# ── Split parameters ──────────────────────────────────────────────────────────
+split:
+  llff_holdout: 8       # interp: every k-th image to test (LLFF standard = 8)
+  sector_frac: 0.30     # sector: fraction of cameras in the contiguous test sector
+
+# ── Training ──────────────────────────────────────────────────────────────────
 train:
   iterations: 30000
   lambda_dssim: 0.2
@@ -17,8 +25,13 @@ train:
   opacity_reset_every: 3000
   prune_opacity: 0.005
 
+# ── Evaluation ────────────────────────────────────────────────────────────────
 eval:
-  metrics: [] # TODO
+  metrics: [psnr, ssim, lpips]
+  depth_metrics: true       # depth MAE on DTU (requires calibrated GT depth)
+  floater_proxy: true       # depth consistency under small camera perturbations
 
-depth_lambda: 0.05
-drop_rate: 0.1
+# ── Method-specific hyperparameters ───────────────────────────────────────────
+depth_lambda: 0.05              # depth supervision weight (fsgs, dngaussian, cross_view_gating)
+drop_rate: 0.1                  # DropGaussian: Gaussian dropout rate during training
+confidence_threshold: 0.5       # CrossViewGating: min cross-view confidence to allow densification
