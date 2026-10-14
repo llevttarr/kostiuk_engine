@@ -1,178 +1,163 @@
-from __future__ import annotations
-
 import json
+import math
 from pathlib import Path
 
 import numpy as np
 
-from splataudit.data import Scene
+PROTOCOLS = ("p0", "p2")
+SECTOR_POSITIONS = {"llff": 0, "dtu": 2, "mip360": 4}
+# without the gap the mip360 sector is no farther from training than p0 test views
+SECTOR_GAP = {"dtu": 0, "mip360": 1}
+LLFF_HOLD = 8
+
+DTU_TRAIN = [25, 22, 28, 40, 44, 48, 0, 8, 13]
+DTU_EXCLUDE = [3, 4, 5, 6, 7, 16, 17, 18, 19, 20, 21, 36, 37, 38, 39]
+DTU_TEST = [i for i in range(49) if i not in DTU_TRAIN + DTU_EXCLUDE]
+
+DISTANCE_BINS = (0.0, 5.0, 10.0, 20.0, math.inf)
+SPLIT_VERSION = 2
 
 
-# Type alias for a split: maps role → list of image_ids
-Split = dict[str, list[int]]
-
-
-# ─── Public API ───────────────────────────────────────────────────────────────
-
-
-def make_splits(
-    scene: Scene,
-    n_views: int,
-    mode: str,
-    seed: int,
-    *,
-    sector_frac: float = 0.30,
-    llff_holdout: int = 8,
-) -> Split:
-    """
-    Build a train/test split for *scene*.
-
-    Parameters
-    ----------
-    scene : Scene
-    n_views : int
-        Number of training views to select (typically 3 or 9).
-    mode : str
-        ``"interp"``  — test views are interleaved along the trajectory
-                        (~5° angular gap to the nearest train view).
-                        Reproduces the standard LLFF evaluation protocol.
-
-        ``"sector"``  — test views form a contiguous, unobserved angular
-                        sector (~30 % of cameras).  Forces spatial
-                        extrapolation rather than near-trajectory
-                        interpolation.
-    seed : int
-        RNG seed for reproducible train-view selection.
-    sector_frac : float
-        Fraction of cameras reserved as the test sector (``mode="sector"``).
-    llff_holdout : int
-        Every k-th image becomes a test view (``mode="interp"``).
-
-    Returns
-    -------
-    dict
-        ``{"train": [image_id, ...], "test": [image_id, ...]}``
-        Train and test image_ids are disjoint and sorted.
-    """
-    rng = np.random.default_rng(seed)
-
-    if mode == "interp":
-        return _interp_split(scene, n_views, llff_holdout, rng)
-    elif mode == "sector":
-        return _sector_split(scene, n_views, sector_frac, rng)
+def make_split(scene, protocol, n_views, k=None):
+    """Split record for one scene: train / test / eval_all names + distances."""
+    extra = {}
+    if protocol == "p0":
+        train, test, eval_all = p0_ids(scene, n_views)
+        ordering = "filename"
+    elif protocol == "p2":
+        if SECTOR_POSITIONS[scene.dataset] == 0:
+            raise ValueError(f"no P2 on {scene.dataset}")
+        train, test, eval_all, ordering, gap = p2_ids(scene, n_views, k)
+        p0_test = set(p0_ids(scene, n_views)[1])
+        extra = {"gap": gap, "shared_with_p0": scene.names(sorted(set(test) & p0_test))}
     else:
-        raise ValueError(f"Unknown split mode {mode!r}. Choose 'interp' or 'sector'.")
+        raise ValueError(f"unknown protocol {protocol}")
+
+    assert not set(train) & set(eval_all) and set(test) <= set(eval_all), "train views leak into eval"
+    return {
+        "version": SPLIT_VERSION,
+        "dataset": scene.dataset,
+        "scene": scene.name,
+        "protocol": protocol,
+        "n_views": n_views,
+        "k": k,
+        "ordering": ordering,
+        "train": scene.names(train),
+        "test": scene.names(test),
+        "eval_all": scene.names(eval_all),
+        "distances": view_distances(scene, train, eval_all),
+        **extra,
+    }
 
 
-def save_split(path: Path, split: Split, meta: dict) -> None:
-    """
-    Persist a split and its metadata to JSON.
+def split_path(splits_root, dataset, scene, protocol, n_views, k=None):
+    tag = f"{protocol}_{n_views}v" + (f"_k{k}" if k is not None else "")
+    return Path(splits_root) / dataset / scene / f"{tag}.json"
 
-    The JSON file is the single source of truth for reproducibility:
-    it records the exact image_ids used for train/test alongside the
-    config parameters that produced them.
-    """
+
+def save_split(path, record):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"train": split["train"], "test": split["test"], **meta}
-    path.write_text(json.dumps(payload, indent=2))
+    path.write_text(json.dumps(record, indent=1) + "\n")
 
 
-def load_split(path: Path) -> tuple[Split, dict]:
-    """
-    Load a persisted split.
-
-    Returns
-    -------
-    split : dict  ``{"train": [...], "test": [...]}``
-    meta  : dict  remaining metadata (scene, mode, seed, …)
-    """
-    payload = json.loads(Path(path).read_text())
-    split: Split = {
-        "train": payload.pop("train"),
-        "test":  payload.pop("test"),
-    }
-    return split, payload
+def load_split(path):
+    return json.loads(Path(path).read_text())
 
 
-# ─── Private helpers ──────────────────────────────────────────────────────────
+def resolve(scene, record):
+    """Split record names -> this scene's image ids."""
+    return {key: scene.ids(record[key]) for key in ("train", "test", "eval_all")}
 
 
-def _interp_split(
-    scene: Scene,
-    n_views: int,
-    holdout: int,
-    rng: np.random.Generator,
-) -> Split:
-    """
-    Interleaved split: every ``holdout``-th image goes to test.
+def view_distances(scene, train_ids, view_ids):
+    """Angle (deg) from each view to its nearest train view, keyed by name."""
+    centroid = scene.centroid
 
-    Train views are chosen with even spacing along the remaining candidates
-    so they cover the full trajectory regardless of scene length.
-    """
-    all_ids = [cam.image_id for cam in scene.cameras]
+    def unit(v):
+        return v / np.linalg.norm(v, axis=-1, keepdims=True)
 
-    test_ids = [iid for i, iid in enumerate(all_ids) if i % holdout == 0]
-    test_set = set(test_ids)
-    train_pool = [iid for iid in all_ids if iid not in test_set]
-
-    if len(train_pool) < n_views:
-        raise ValueError(
-            f"[{scene.name}] Only {len(train_pool)} candidate train images after "
-            f"holdout={holdout}, but n_views={n_views} requested."
-        )
-
-    train_ids = _evenly_spaced(train_pool, n_views)
-    return {"train": sorted(train_ids), "test": sorted(test_ids)}
+    dirs = unit(np.stack([scene.get_camera(i).center for i in train_ids]) - centroid)
+    fwd = np.stack([scene.get_camera(i).forward for i in train_ids])
+    out = {}
+    for vid in view_ids:
+        cam = scene.get_camera(vid)
+        centre = np.degrees(np.arccos(np.clip(dirs @ unit(cam.center - centroid), -1, 1)))
+        optical = np.degrees(np.arccos(np.clip(fwd @ cam.forward, -1, 1)))
+        j = int(centre.argmin())
+        out[cam.name] = {
+            "centre_deg": round(float(centre[j]), 4),
+            "optical_deg": round(float(optical.min()), 4),
+            "nearest_train": scene.get_camera(train_ids[j]).name,
+        }
+    return out
 
 
-def _sector_split(
-    scene: Scene,
-    n_views: int,
-    sector_frac: float,
-    rng: np.random.Generator,
-) -> Split:
-    """
-    Sector split: a contiguous arc of cameras is held out as test.
+def distance_bin(deg):
+    """P1 group label of an angle in degrees."""
+    for lo, hi in zip(DISTANCE_BINS[:-1], DISTANCE_BINS[1:]):
+        if lo <= deg < hi:
+            return f"{lo:g}-{hi:g}" if math.isfinite(hi) else f">{lo:g}"
 
-    Ordering
-    --------
-    * **Mip-NeRF 360 / DTU** — sort by azimuth angle (360° or spherical).
-    * **LLFF** (forward-facing) — sort by camera-center X coordinate,
-      representing position along the capture trajectory.
 
-    The test sector starts at the midpoint of the ordered sequence so that
-    train candidates are spread on both sides, giving reasonable coverage.
-    """
-    cameras = scene.cameras
+def capture_order(scene, ids):
+    """Ids ordered along the capture, plus the kind of ordering."""
+    cams = [scene.get_camera(i) for i in ids]
+    C = np.stack([c.center for c in cams])
+    if scene.dataset == "llff":
+        _, _, vt = np.linalg.svd(C - C.mean(0), full_matrices=False)
+        proj = (C - C.mean(0)) @ vt[0]
+        if np.corrcoef(proj, np.arange(len(ids)))[0, 1] < 0:
+            proj = -proj
+        return [ids[j] for j in np.argsort(proj, kind="stable")], "pc1"
 
-    if scene.dataset in ("mip360", "dtu"):
-        ordered = sorted(cameras, key=lambda c: c.azimuth)
+    up = np.mean([c.up for c in scene.cameras], axis=0)
+    up /= np.linalg.norm(up)
+    v = C - scene.centroid
+    v -= (v @ up)[:, None] * up
+    e1 = v[0] / np.linalg.norm(v[0])
+    az = np.arctan2(v @ np.cross(up, e1), v @ e1) % (2 * np.pi)
+    order = list(np.argsort(az, kind="stable"))
+    if scene.dataset == "mip360":
+        return [ids[j] for j in order], "azimuth-circular"
+
+    # dtu is an open arc, cut it at the largest azimuth gap
+    a = az[order]
+    start = (int(np.diff(np.concatenate([a, a[:1] + 2 * np.pi])).argmax()) + 1) % len(order)
+    return [ids[j] for j in order[start:] + order[:start]], "azimuth-linear"
+
+
+def p0_ids(scene, n):
+    """Published split -> (train, test, eval_all) ids."""
+    if scene.dataset == "dtu":
+        return sorted(DTU_TRAIN[:n]), list(DTU_TEST), list(DTU_TEST)
+    ids = [c.image_id for c in scene.cameras]
+    test = [i for i in ids if i % LLFF_HOLD == 0]
+    train = _evenly_spaced([i for i in ids if i % LLFF_HOLD != 0], n)
+    return train, test, [i for i in ids if i not in train]
+
+
+def p2_ids(scene, n, k):
+    """Sector split -> (train, test, eval_all, ordering, gap)."""
+    pool = [c.image_id for c in scene.cameras]
+    if scene.dataset == "dtu":
+        pool = [i for i in pool if i not in DTU_EXCLUDE]
+    K = len(p0_ids(scene, n)[1])
+    B = SECTOR_GAP[scene.dataset] * K
+    ordered, ordering = capture_order(scene, pool)
+    N = len(ordered)
+
+    if ordering == "azimuth-circular":
+        start = round(k * N / SECTOR_POSITIONS[scene.dataset])
+        test = [ordered[(start + i) % N] for i in range(K)]
+        rest = [ordered[(start + K + B + i) % N] for i in range(N - K - 2 * B)]
     else:
-        # LLFF: forward-facing trajectory — order by X position
-        ordered = sorted(cameras, key=lambda c: float(c.center[0]))
-
-    n_total = len(ordered)
-    n_test = max(1, round(n_total * sector_frac))
-
-    # Place sector starting at midpoint (train candidates wrap around both ends)
-    sector_start = n_total // 2
-    sector_indices = {(sector_start + i) % n_total for i in range(n_test)}
-
-    test_ids  = [ordered[i].image_id for i in range(n_total) if i in sector_indices]
-    train_pool = [ordered[i].image_id for i in range(n_total) if i not in sector_indices]
-
-    if len(train_pool) < n_views:
-        raise ValueError(
-            f"[{scene.name}] Only {len(train_pool)} non-sector images, "
-            f"but n_views={n_views} requested.  Reduce sector_frac."
-        )
-
-    train_ids = _evenly_spaced(train_pool, n_views)
-    return {"train": sorted(train_ids), "test": sorted(test_ids)}
+        test = ordered[:K] if k == 0 else ordered[N - K:]
+        rest = ordered[K + B:] if k == 0 else ordered[:N - K - B]
+    train = _evenly_spaced(rest, n)
+    return sorted(train), sorted(test), [i for i in pool if i not in train], ordering, B
 
 
-def _evenly_spaced(pool: list[int], n: int) -> list[int]:
-    """Select *n* evenly-spaced elements from *pool* (deterministic)."""
-    indices = np.round(np.linspace(0, len(pool) - 1, n)).astype(int)
-    return [pool[i] for i in indices]
+def _evenly_spaced(pool, n):
+    # fsgs pick, python round is half to even
+    return [pool[round(float(x))] for x in np.linspace(0, len(pool) - 1, n)]

@@ -7,28 +7,27 @@ import numpy as np
 from splataudit.data import Scene
 
 
-# ─── Constants ────────────────────────────────────────────────────────────────
-
 _DEPTH_MODEL_ID = "depth-anything/Depth-Anything-V2-Large-hf"
-_CACHE_SUBDIR   = ".depth_cache"   # relative to scene's image parent dir
-
-
-# ─── Public API ───────────────────────────────────────────────────────────────
 
 
 def depth_prior(
     scene: Scene,
     view_ids: list[int],
+    cache_root: str | Path = "cache",
 ) -> dict[int, np.ndarray]:
     """
     Run Depth Anything V2 on the specified training views.
 
-    Only *view_ids* (train images) are processed — test images are never
+    Returns **relative disparity** (inverse depth, affine-invariant), the
+    model's raw ``predicted_depth`` resized to the training resolution.  It is
+    *not* the pipeline's ``"depth"`` output, which is an 8-bit min-max
+    visualisation.  Larger values = closer.
+
+    Only *view_ids* (train images) are processed; test images are never
     touched, so no held-out information leaks through the depth prior.
 
-    Results are cached as ``.npy`` files in ``<image_dir>/../.depth_cache/``
-    so that repeated runs skip inference.  Delete the cache directory to
-    force recomputation (e.g. after switching model variants).
+    Results are cached per model and resolution under
+    ``<cache_root>/depth/<dataset>/<scene>/<model>_<W>x<H>/<image>.npy``.
 
     Parameters
     ----------
@@ -42,8 +41,10 @@ def depth_prior(
 
     Notes
     -----
-    * Output is **affine-invariant** (relative depth, not metric).
-      FSGS and DNGaussian fit a per-image scale + shift during training.
+    * Output is **affine-invariant disparity** (not metric depth).
+      FSGS / DNGaussian losses must be written for disparity (e.g. Pearson
+      correlation against rendered inverse depth) or invert it after an
+      affine fit, never use it as depth directly.
       The confidence function normalises depth independently for
       cross-view consistency.
     * Model: ``depth-anything/Depth-Anything-V2-Large-hf``.
@@ -58,7 +59,7 @@ def depth_prior(
 
     for iid in view_ids:
         cam  = scene.get_camera(iid)
-        path = _cache_path(cam)
+        path = _cache_path(cam, scene, cache_root)
         if path.exists():
             results[iid] = np.load(str(path))
         else:
@@ -67,7 +68,6 @@ def depth_prior(
     if not missing:
         return results
 
-    # ── Lazy-load Depth Anything V2 ───────────────────────────────────────────
     try:
         from transformers import pipeline as hf_pipeline
         from PIL import Image as PILImage
@@ -89,10 +89,14 @@ def depth_prior(
         img_pil = PILImage.fromarray(cam.load_image())
         result  = pipe(img_pil)
 
-        # ``result["depth"]`` is a PIL Image in float mode
-        depth = np.array(result["depth"], dtype=np.float32)
+        # raw model output (relative disparity); "depth" is an 8-bit visualisation
+        disp = result["predicted_depth"].squeeze().detach().cpu().numpy().astype(np.float32)
+        if disp.shape != (cam.height, cam.width):
+            import cv2
+            disp = cv2.resize(disp, (cam.width, cam.height), interpolation=cv2.INTER_LINEAR)
+        depth = disp
 
-        path = _cache_path(cam)
+        path = _cache_path(cam, scene, cache_root)
         path.parent.mkdir(parents=True, exist_ok=True)
         np.save(str(path), depth)
 
@@ -108,6 +112,13 @@ def confidence(
 ) -> dict[int, np.ndarray]:
     """
     Per-pixel geometric reliability from cross-view depth agreement.
+
+    .. warning:: Phase-3 prototype, not validated.  ``depths`` are relative
+       *disparities* (see :func:`depth_prior`), but the reprojection below
+       treats normalised disparity × (far − near) as metric depth, so the
+       correspondences are not geometrically meaningful yet.  Fix before use:
+       align each disparity map to the scene (e.g. affine fit to the
+       ``sparse_sfm`` points in that view), invert, then reproject.
 
     Algorithm
     ---------
@@ -166,11 +177,10 @@ def confidence(
     return results
 
 
-# ─── Private helpers ──────────────────────────────────────────────────────────
-
-
-def _cache_path(cam) -> Path:
-    return cam.image_path.parent.parent / _CACHE_SUBDIR / f"{cam.image_path.stem}.npy"
+def _cache_path(cam, scene: Scene, cache_root: str | Path) -> Path:
+    model = _DEPTH_MODEL_ID.split("/")[-1]
+    return (Path(cache_root) / "depth" / scene.dataset / scene.name
+            / f"{model}_{cam.width}x{cam.height}" / f"{Path(cam.name).stem}.npy")
 
 
 def _normalise_depth(d: np.ndarray, lo: float = 2.0, hi: float = 98.0) -> np.ndarray:

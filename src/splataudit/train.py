@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import random
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -10,15 +8,14 @@ import torch.nn.functional as F
 from scipy.spatial import KDTree
 from tqdm import trange
 
+from splataudit.utils import CameraSampler
+
 if TYPE_CHECKING:
     from splataudit.data import Scene
     from splataudit.methods import Method
 
 # SH DC coefficient: 1 / (2 * sqrt(π))
 _C0 = 0.28209479177387814
-
-
-# ─── Public API ───────────────────────────────────────────────────────────────
 
 
 def train(
@@ -37,9 +34,9 @@ def train(
     Parameters
     ----------
     cfg : dict
-        Uses ``cfg["train"]``:
-        iterations, lambda_dssim, sh_degree, densify_every, densify_until,
-        grad_threshold, opacity_reset_every, prune_opacity.
+        Uses ``cfg["seed"]`` and ``cfg["train"]``:
+        iterations, lambda_dssim, sh_degree, densify_from, densify_every,
+        densify_until, grad_threshold, opacity_reset_every, prune_opacity.
     scene : Scene
     train_ids : list[int]
     xyz : np.ndarray (N, 3) float32
@@ -68,41 +65,41 @@ def train(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tc = cfg["train"]
 
-    # ── Gaussian initialisation ───────────────────────────────────────────────
-    params = _init_gaussians(xyz, rgb, tc["sh_degree"], device)
-    optimizers = _make_optimizers(params)
+    # 3DGS convention: scene scale = radius of the *training* cameras.
+    # Scales the clone/split/prune thresholds and the means learning rate.
+    scene_scale = scene.camera_extent(train_ids)
 
-    # ── Densification strategy ────────────────────────────────────────────────
+    params = _init_gaussians(xyz, rgb, tc["sh_degree"], device)
+    optimizers = _make_optimizers(params, scene_scale)
+
     strategy = DefaultStrategy(
         prune_opa=tc["prune_opacity"],
         grow_grad2d=tc["grad_threshold"],
         grow_scale3d=0.01,
         grow_scale2d=0.05,
         prune_scale3d=0.1,
-        prune_scale2d=10.0,
-        refine_start_iter=tc["densify_every"],
+        refine_start_iter=tc["densify_from"],
+        refine_every=tc["densify_every"],
         refine_stop_iter=tc["densify_until"],
         reset_every=tc["opacity_reset_every"],
         absgrad=False,
     )
     strategy.check_sanity(params, optimizers)
-    strategy_state = strategy.initialize_state(scene_scale=float(scene.bounds[1]))
+    strategy_state = strategy.initialize_state(scene_scale=scene_scale)
 
-    # ── Move priors to device ─────────────────────────────────────────────────
     d_gpu = {iid: torch.tensor(d, device=device) for iid, d in (depths or {}).items()}
     c_gpu = {iid: torch.tensor(c, device=device) for iid, c in (confidence or {}).items()}
 
-    train_cams = [scene.get_camera(iid) for iid in train_ids]
+    # seeded per-epoch permutation: seed s gives every method the same camera order
+    sampler = CameraSampler([scene.get_camera(iid) for iid in train_ids], int(cfg["seed"]))
     ssim_fn = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
 
-    # ── Training loop ─────────────────────────────────────────────────────────
     for step in trange(tc["iterations"], desc="Training", dynamic_ncols=True):
 
         # SH degree increases every 1 000 steps up to the configured maximum
         sh_degree = min(tc["sh_degree"], step // 1000)
 
-        # Random training camera
-        cam = random.choice(train_cams)
+        cam = sampler.next()
         viewmat = torch.tensor(cam.w2c, dtype=torch.float32, device=device).unsqueeze(0)
         K_mat   = torch.tensor(cam.K,   dtype=torch.float32, device=device).unsqueeze(0)
         gt_img  = _load_gt(cam, device)          # (1, 3, H, W) float32 [0,1]
@@ -114,10 +111,8 @@ def train(
             "confidence": c_gpu.get(cam.image_id),
         }
 
-        # ── Hook: pre_render ──────────────────────────────────────────────────
         rp = method.pre_render(dict(params), step)
 
-        # ── Rasterise ─────────────────────────────────────────────────────────
         renders, alphas, info = rasterization(
             means     = rp["means"],
             quats     = F.normalize(rp["quats"], dim=-1),
@@ -138,21 +133,17 @@ def train(
 
         render_out = {"rgb": render_rgb, "depth": render_depth, "alpha": alphas[0]}
 
-        # ── Photometric loss ──────────────────────────────────────────────────
         l1   = F.l1_loss(render_rgb, gt_img)
         lssim = 1.0 - ssim_fn(render_rgb, gt_img)
         loss  = (1.0 - tc["lambda_dssim"]) * l1 + tc["lambda_dssim"] * lssim
 
-        # ── Hook: extra_loss ──────────────────────────────────────────────────
         for lval in method.extra_loss(render_out, batch, step).values():
             loss = loss + lval
 
-        # ── Strategy: pre-backward (sets up grad retention on means2d) ───────
-        strategy.step_pre_backward(params, optimizers, strategy_state, info, step)
+        strategy.step_pre_backward(params, optimizers, strategy_state, step, info)
 
         loss.backward()
 
-        # ── Hook: densify_mask (gate which Gaussians may be densified) ────────
         # Zero out means2d grads for ineligible Gaussians *before* the
         # strategy reads them for threshold-based clone/split decisions.
         if (
@@ -161,30 +152,25 @@ def train(
         ):
             dmask = method.densify_mask(info["means2d"].grad, dict(params), step)
             if dmask is not None:
-                info["means2d"].grad[~dmask] = 0.0
+                # means2d.grad is (C, N, 2) with packed=False; dmask is (N,)
+                info["means2d"].grad[:, ~dmask] = 0.0
 
-        # ── Optimiser step ────────────────────────────────────────────────────
         for opt in optimizers.values():
             opt.step()
             opt.zero_grad()
 
-        # Exponential LR decay for means: 1.6e-4 → 1.6e-6 over all iterations
-        lr_means = 1.6e-4 * (1.6e-6 / 1.6e-4) ** (step / tc["iterations"])
+        # Exponential LR decay for means: 1.6e-4 → 1.6e-6 (× scene scale) over all iterations
+        lr_means = 1.6e-4 * (1.6e-6 / 1.6e-4) ** (step / tc["iterations"]) * scene_scale
         _set_lr(optimizers["means"], lr_means)
 
-        # ── Strategy: post-backward (densify + prune) ─────────────────────────
-        strategy.step_post_backward(params, optimizers, strategy_state, info, step)
+        strategy.step_post_backward(params, optimizers, strategy_state, step, info)
 
-        # ── Hook: post_step ───────────────────────────────────────────────────
         method.post_step(dict(params), step)
 
     return {k: v.detach().cpu() for k, v in params.items()} | {
         "sh_degree":   tc["sh_degree"],
         "n_gaussians": params["means"].shape[0],
     }
-
-
-# ─── Helpers ─────────────────────────────────────────────────────────────────
 
 
 def _init_gaussians(
@@ -219,14 +205,15 @@ def _init_gaussians(
     }
 
 
-def _make_optimizers(params: dict) -> dict[str, torch.optim.Adam]:
+def _make_optimizers(params: dict, scene_scale: float) -> dict[str, torch.optim.Adam]:
+    # 3DGS defaults; position lr is relative to the scene scale
     lr = {
-        "means":     1.6e-4,
+        "means":     1.6e-4 * scene_scale,
         "quats":     1e-3,
         "scales":    5e-3,
         "opacities": 5e-2,
-        "sh0":       1e-3,
-        "shN":       1e-3 / 20,   # higher-order SH trained slower
+        "sh0":       2.5e-3,
+        "shN":       2.5e-3 / 20,   # higher-order SH trained slower
     }
     return {k: torch.optim.Adam([v], lr=lr[k], eps=1e-15) for k, v in params.items()}
 

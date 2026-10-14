@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import torch
+from typing import TYPE_CHECKING
 
-
-# ─── Base class ───────────────────────────────────────────────────────────────
+if TYPE_CHECKING:
+    import torch
 
 
 class Method:
@@ -31,8 +31,18 @@ class Method:
 
     #: Set to True for methods that require monocular depth priors.
     #: When True, `priors.depth_prior()` is called before training and
-    #: the depth maps are passed into `extra_loss` via `batch["depths"]`.
+    #: the depth maps are passed into `extra_loss` via `batch["depth"]`.
     requires_depth: bool = False
+
+    #: False until the method's hooks are actually written.  The runner refuses
+    #: to train an unimplemented method: running it would silently train vanilla
+    #: 3DGS under another name, exactly the "methods don't matter" result RQ1
+    #: is testing for.
+    implemented: bool = True
+
+    def __init__(self) -> None:
+        if not self.implemented:
+            raise NotImplementedError(f"method {type(self).__name__} is not implemented yet")
 
     def pre_render(self, state: dict, step: int) -> dict:
         """
@@ -89,9 +99,6 @@ class Method:
         pass
 
 
-# ─── Method implementations ───────────────────────────────────────────────────
-
-
 class Vanilla(Method):
     """Standard 3DGS with no additional regularisation (Kerbl et al., 2023)."""
     pass
@@ -107,6 +114,7 @@ class FSGS(Method):
     """
 
     requires_depth = True
+    implemented = False
 
     def extra_loss(self, render, batch, step):
         # TODO: affine-invariant depth alignment loss
@@ -124,6 +132,7 @@ class DNGaussian(Method):
     """
 
     requires_depth = True
+    implemented = False
 
     def extra_loss(self, render, batch, step):
         # TODO: global depth alignment + local ranking loss
@@ -133,14 +142,18 @@ class DNGaussian(Method):
 class DropGaussian(Method):
     """
     Structural Dropout Regularisation (Park et al., CVPR 2025).
-    Also referred to as CoR-GS.
 
     Randomly drops a fraction of Gaussians before each render during
-    training, acting as a structural regulariser that discourages
-    over-reliance on any single Gaussian.
+    training (remaining opacities compensated by 1/(1-p)), acting as a
+    structural regulariser that discourages over-reliance on any single
+    Gaussian.  Not to be confused with CoR-GS (Zhang et al., ECCV 2024),
+    which co-regularises two Gaussian fields.
     """
 
+    implemented = False
+
     def __init__(self, drop_rate: float = 0.1):
+        super().__init__()
         self.drop_rate = drop_rate
 
     def pre_render(self, state: dict, step: int) -> dict:
@@ -156,17 +169,19 @@ class CrossViewGating(Method):
     measuring depth agreement when projecting each view's depth map
     into the other views.  The resulting confidence signal is used to:
 
-    1. Weight depth supervision — penalise unreliable regions less.
-    2. Gate densification     — suppress floater growth in low-confidence
-                                regions (via ``densify_mask``).
+    1. Weight depth supervision: penalise unreliable regions less.
+    2. Gate densification: suppress floater growth in low-confidence
+       regions (via ``densify_mask``).
 
     The confidence maps are computed once before training in
     ``priors.confidence()`` and stored in ``batch["confidence"]``.
     """
 
     requires_depth = True
+    implemented = False
 
     def __init__(self, confidence_threshold: float = 0.5):
+        super().__init__()
         self.confidence_threshold = confidence_threshold
 
     def densify_mask(
@@ -176,7 +191,8 @@ class CrossViewGating(Method):
         step: int,
     ) -> torch.Tensor | None:
         # TODO: project each Gaussian onto the confidence maps;
-        #   allow densification only where confidence > threshold
+        #   allow densification only where confidence > threshold.
+        #   Return shape (N,), one flag per Gaussian.
         return None
 
     def extra_loss(self, render, batch, step):
