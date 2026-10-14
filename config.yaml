@@ -1,37 +1,39 @@
+data_root: data/
+splits_root: splits/
+cache_root: cache/
+output_dir: results/
+
+dataset: llff
+scenes: []
+n_views: null
+scene: fern
+init: sparse_sfm
+method: vanilla
+protocol: p0
+k: null
 seed: 0
-n_views: 3              # 3 or 9 — training view count
-dataset: llff           # llff | dtu | mip360
-data_root: data/        # root directory: data/<dataset>/<scene>/
-scenes: []              # list of scene names to run; [] = all scenes for the dataset
 
-# ── Experiment cube ───────────────────────────────────────────────────────────
-init:     colmap        # random | colmap | dust3r
-method:   vanilla       # vanilla | fsgs | dngaussian | dropgaussian | cross_view_gating
-protocol: interp        # interp | sector
+sweep:
+  inits: [random, sparse_sfm, dense_mvs, foundation]
+  methods: [vanilla, fsgs, dngaussian, dropgaussian]
+  protocols: [p0, p2]
+  seeds: [0, 1, 2]
 
-# ── Split parameters ──────────────────────────────────────────────────────────
-split:
-  llff_holdout: 8       # interp: every k-th image to test (LLFF standard = 8)
-  sector_frac: 0.30     # sector: fraction of cameras in the contiguous test sector
-
-# ── Training ──────────────────────────────────────────────────────────────────
 train:
-  iterations: 30000
+  iterations: 10000
   lambda_dssim: 0.2
   sh_degree: 3
+  densify_from: 500
   densify_every: 100
-  densify_until: 15000
+  densify_until: 5000
   grad_threshold: 0.0002
   opacity_reset_every: 3000
   prune_opacity: 0.005
 
-# ── Evaluation ────────────────────────────────────────────────────────────────
 eval:
-  metrics: [psnr, ssim, lpips]
-  depth_metrics: true       # depth MAE on DTU (requires calibrated GT depth)
-  floater_proxy: true       # depth consistency under small camera perturbations
+  lpips_nets: [vgg, alex]
+  floater_proxy: false
 
-# ── Method-specific hyperparameters ───────────────────────────────────────────
-depth_lambda: 0.05              # depth supervision weight (fsgs, dngaussian, cross_view_gating)
-drop_rate: 0.1                  # DropGaussian: Gaussian dropout rate during training
-confidence_threshold: 0.5       # CrossViewGating: min cross-view confidence to allow densification
+depth_lambda: 0.05
+drop_rate: 0.1
+confidence_threshold: 0.5

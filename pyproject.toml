@@ -37,4 +37,5 @@ line-length = 100
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 markers = ["slow: needs a GPU"]

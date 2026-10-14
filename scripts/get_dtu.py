@@ -2,8 +2,12 @@
 # the dtu server supports http range requests, so zipfile can read the central directory and fetch only the entries we want.
 #
 #  python scripts/get_dtu.py list
-#  python scripts/get_dtu.py get 8 21 30 34 - 1568 files(3 GB)
-#  python scripts/get_dtu.py get 8 --light max - one lighting(0.5 GB)
+#  python scripts/get_dtu.py get 8 21 30 34 --light 3 - benchmark lighting only (~0.1 GB/scan)
+#  python scripts/get_dtu.py get 8 21 30 34 - all lightings (~0.75 GB/scan)
+#  python scripts/get_dtu.py get --light 3 - all 15 standard scans, lighting 3
+#  python scripts/get_dtu.py calib - cal18 projection matrices (49 small txt files)
+#  python scripts/get_dtu.py masks - RegNeRF idrmasks for evaluation (google drive)
+#  python scripts/get_dtu.py get ... --points - also the STL ground-truth clouds
 
 import io
 import sys
@@ -14,6 +18,8 @@ from pathlib import Path
 BASE = "https://roboimagedata2.compute.dtu.dk/data/MVS"
 OUT = Path("data/dtu")
 STANDARD = [8, 21, 30, 31, 34, 38, 40, 41, 45, 55, 63, 82, 103, 110, 114] # few-shot set
+# RegNeRF/DNGaussian evaluation masks ("backed up from RegNeRF", DNGaussian README)
+MASKS_GDRIVE = "https://drive.google.com/drive/folders/1OEmJcbP0XUVfG647mdYWxEy9yOw7L_Si"
 
 
 class HttpFile(io.RawIOBase):
@@ -64,7 +70,7 @@ def list_archives():
         print("  folders:", folders[:8], "...")
 
 
-def get(scans, light=None):
+def get(scans, light=None, points=False):
     # images: Rectified/scan8/rect_<pos>_<light>_r5000.png, light in 0..6 and "max"
     # clouds: Points/stl/stl008_total.ply
     want = {f"scan{s}" for s in scans}
@@ -77,7 +83,8 @@ def get(scans, light=None):
         return any(f"stl{s:03d}_" in Path(n).name for s in scans)
 
     OUT.mkdir(parents=True, exist_ok=True)
-    for name, keep in (("Rectified.zip", is_img), ("Points.zip", is_cloud)):
+    archives = [("Rectified.zip", is_img)] + ([("Points.zip", is_cloud)] if points else [])
+    for name, keep in archives:
         z = open_zip(name)
         sel = [n for n in z.namelist() if keep(n)]
         gb = sum(z.getinfo(n).file_size for n in sel) / 2 ** 30
@@ -91,15 +98,40 @@ def get(scans, light=None):
                 print(f"  {i}/{len(sel)}")
 
 
+def get_calib():
+    # cal18 = calibration of the 1600x1200 rectified images (what RegNeRF loads).
+    # it only ships inside SampleSet.zip, so range-read just those entries
+    z = open_zip("SampleSet.zip")
+    sel = [n for n in z.namelist() if "/Calibration/cal18/pos_" in n and n.endswith(".txt")]
+    out = OUT / "Calibration" / "cal18"
+    out.mkdir(parents=True, exist_ok=True)
+    for n in sel:
+        (out / Path(n).name).write_bytes(z.read(n))
+    print(f"{len(sel)} projection matrices -> {out}")
+
+
+def get_masks():
+    import gdown
+    out = OUT / "masks_download"
+    gdown.download_folder(MASKS_GDRIVE, output=str(out), quiet=False)
+    print(f"downloaded to {out}; unpack so that {OUT}/idrmasks/<scan>/... exists")
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
     light = None
     if "--light" in args:
         i = args.index("--light")
         light, args = args[i + 1], args[:i] + args[i + 2:]
+    points = "--points" in args
+    args = [a for a in args if a != "--points"]
     if not args or args[0] == "list":
         list_archives()
     elif args[0] == "get":
-        get([int(a) for a in args[1:]] or STANDARD[:4], light)
+        get([int(a) for a in args[1:]] or STANDARD, light, points)
+    elif args[0] == "calib":
+        get_calib()
+    elif args[0] == "masks":
+        get_masks()
     else:
-        print("usage: get_dtu.py list | get <scan>... [--light max]")
+        print("usage: get_dtu.py list | get [<scan>...] [--light 3] [--points] | calib | masks")

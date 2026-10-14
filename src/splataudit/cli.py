@@ -1,106 +1,138 @@
-from __future__ import annotations
-
 import argparse
-import sys
-from pathlib import Path
+
+import numpy as np
+
+from splataudit.data import DATASETS
+
+INITS = ["random", "sparse_sfm", "dense_mvs", "foundation"]
+METHODS = ["vanilla", "fsgs", "dngaussian", "dropgaussian", "cross_view_gating"]
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        prog="splataudit",
-        description="Few-shot 3DGS audit: initialisation × method × protocol.",
-    )
+def main():
+    parser = argparse.ArgumentParser(prog="splataudit", description="few-shot 3dgs audit: init x method x protocol")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    # ── splataudit run ────────────────────────────────────────────────────────
-    p_run = sub.add_parser("run", help="Run a single experiment cell.")
-    p_run.add_argument("--config",     required=True, help="Path to config YAML.")
-    p_run.add_argument("--scene",      default=None,  help="Override scene name.")
-    p_run.add_argument("--init",       default=None,  choices=["random", "colmap", "dust3r"])
-    p_run.add_argument("--method",     default=None,
-                       choices=["vanilla", "fsgs", "dngaussian", "dropgaussian", "cross_view_gating"])
-    p_run.add_argument("--protocol",   default=None,  choices=["interp", "sector"])
-    p_run.add_argument("--seed",       default=None,  type=int)
-    p_run.add_argument("--output-dir", default="results")
+    p = sub.add_parser("make-splits", help="write p0 / p2 split files")
+    add_data_args(p)
+    p.add_argument("--out", default="splits")
 
-    # ── splataudit sweep ──────────────────────────────────────────────────────
-    p_sweep = sub.add_parser(
-        "sweep",
-        help="Run the full init × method × protocol grid.",
-    )
-    p_sweep.add_argument("--config", required=True, help="Path to config YAML.")
-    p_sweep.add_argument(
-        "--vary",
-        nargs="+",
-        default=["init", "method", "protocol"],
-        choices=["init", "method", "protocol", "seed"],
-        metavar="AXIS",
-        help="Axes to sweep (default: init method protocol).",
-    )
-    p_sweep.add_argument("--output-dir", default="results")
+    p = sub.add_parser("make-inits", help="build and cache initial point clouds")
+    add_data_args(p)
+    p.add_argument("--splits", default="splits")
+    p.add_argument("--cache", default="cache")
+    p.add_argument("--init", nargs="+", default=["random", "sparse_sfm"], choices=INITS)
+    p.add_argument("--protocol", nargs="+", default=["p0", "p2"], choices=["p0", "p2"])
+    p.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2], help="for the seeded inits (random)")
+    p.add_argument("--overwrite", action="store_true")
 
-    # ── splataudit report ─────────────────────────────────────────────────────
-    p_report = sub.add_parser("report", help="Aggregate and print results.")
-    p_report.add_argument("--results",  required=True, help="Path to results CSV.")
-    p_report.add_argument(
-        "--group-by",
-        nargs="+",
-        default=["init", "method", "protocol"],
-        metavar="COL",
-    )
-    p_report.add_argument("--latex", action="store_true", help="Print as LaTeX table.")
+    p = sub.add_parser("run", help="run one experiment cell")
+    p.add_argument("--config", required=True)
+    p.add_argument("--dataset", choices=list(DATASETS))
+    p.add_argument("--scene")
+    p.add_argument("--init", choices=INITS)
+    p.add_argument("--method", choices=METHODS)
+    p.add_argument("--protocol", choices=["p0", "p2"])
+    p.add_argument("--k", type=int, help="p2 sector position")
+    p.add_argument("--seed", type=int)
+    p.add_argument("--output-dir")
+
+    p = sub.add_parser("sweep", help="run the init x method x protocol grid")
+    p.add_argument("--config", required=True)
+    p.add_argument("--output-dir")
+
+    p = sub.add_parser("report", help="per-scene summary of a results csv")
+    p.add_argument("--results", required=True)
+    p.add_argument("--latex", action="store_true")
 
     args = parser.parse_args()
-
-    if args.command == "run":
-        _cmd_run(args)
-    elif args.command == "sweep":
-        _cmd_sweep(args)
-    elif args.command == "report":
-        _cmd_report(args)
+    {"make-splits": make_splits, "make-inits": make_inits, "run": run,
+     "sweep": sweep, "report": report}[args.command](args)
 
 
-# ─── Command implementations ──────────────────────────────────────────────────
+def add_data_args(p):
+    p.add_argument("--data-root", default="data")
+    p.add_argument("--dataset", nargs="+", default=list(DATASETS), choices=list(DATASETS))
+    p.add_argument("--scenes", nargs="+", help="default: the dataset's benchmark scenes")
+    p.add_argument("--n-views", type=int, help="default: the dataset's primary count")
 
 
-def _cmd_run(args) -> None:
-    import yaml
-    from splataudit.runner import run_cell
+def scene_jobs(args):
+    from splataudit.splits import SECTOR_POSITIONS
 
-    cfg = yaml.safe_load(Path(args.config).read_text())
-    # CLI overrides
-    for key in ("scene", "init", "method", "protocol", "seed"):
-        val = getattr(args, key, None)
-        if val is not None:
-            cfg[key] = val
-    cfg["output_dir"] = args.output_dir
+    for ds in args.dataset:
+        jobs = [("p0", None)] + [("p2", k) for k in range(SECTOR_POSITIONS[ds])]
+        for name in args.scenes or DATASETS[ds]["scenes"]:
+            yield ds, name, args.n_views or DATASETS[ds]["n_views"], jobs
 
+
+def make_splits(args):
+    from splataudit.data import load_scene
+    from splataudit.splits import make_split, save_split, split_path
+
+    print(f"{'dataset':7s} {'scene':9s} {'N':>4s}  split      {'#test':>5s} {'test°mean':>9s} "
+          f"{'test°max':>8s}  {'#≤5°':>5s} of eval_all")
+    for ds, name, n, jobs in scene_jobs(args):
+        scene = load_scene(args.data_root, ds, name)
+        for protocol, k in jobs:
+            rec = make_split(scene, protocol, n, k)
+            path = split_path(args.out, ds, name, protocol, n, k)
+            save_split(path, rec)
+            t = np.array([rec["distances"][v]["centre_deg"] for v in rec["test"]])
+            a = np.array([rec["distances"][v]["centre_deg"] for v in rec["eval_all"]])
+            print(f"{ds:7s} {name:9s} {len(scene):4d}  {path.stem:10s} {len(t):5d} {t.mean():9.2f} "
+                  f"{t.max():8.2f}  {int((a < 5).sum()):5d}/{len(a)}")
+
+
+def make_inits(args):
+    from splataudit.data import load_scene
+    from splataudit.init import SEEDED_INITS, build_init
+    from splataudit.splits import load_split, resolve, split_path
+
+    for ds, name, n, jobs in scene_jobs(args):
+        scene = load_scene(args.data_root, ds, name)
+        for protocol, k in jobs:
+            if protocol not in args.protocol:
+                continue
+            path = split_path(args.splits, ds, name, protocol, n, k)
+            train_ids = resolve(scene, load_split(path))["train"]
+            for init in args.init:
+                for seed in (args.seeds if init in SEEDED_INITS else [None]):
+                    s = build_init(init, scene, train_ids, path.stem, seed, args.cache, args.overwrite)
+                    tag = f" seed={seed}" if seed is not None else ""
+                    print(f"{ds}/{name}/{path.stem} {init}{tag}: {s['status']}, "
+                          f"{s.get('n_points', 0)} points, coverage {s.get('coverage', float('nan')):.3f}")
+
+
+def run(args):
+    from splataudit.runner import load_config, run_cell
+
+    cfg = load_config(args.config)
+    for key in ("dataset", "scene", "init", "method", "protocol", "k", "seed"):
+        if getattr(args, key) is not None:
+            cfg[key] = getattr(args, key)
+    if args.output_dir:
+        cfg["output_dir"] = args.output_dir
     rows = run_cell(cfg)
-    if rows:
-        metrics = {k: v for k, v in rows[0].items() if isinstance(v, float)}
-        print("Result (first test view):", metrics)
-    print(f"Done. {len(rows)} test views evaluated.")
+    print(f"done, {sum(r['status'] == 'ok' for r in rows)}/{len(rows)} views evaluated ok")
 
 
-def _cmd_sweep(args) -> None:
-    import yaml
-    from splataudit.runner import sweep
+def sweep(args):
+    from splataudit.runner import load_config, sweep as run_sweep
 
-    cfg = yaml.safe_load(Path(args.config).read_text())
-    cfg["output_dir"] = args.output_dir
-
-    df = sweep(cfg, vary=args.vary)
-    print(f"\nSweep complete. {len(df)} rows saved to {args.output_dir}/results.csv")
+    cfg = load_config(args.config)
+    if args.output_dir:
+        cfg["output_dir"] = args.output_dir
+    print(f"\nsweep done, {run_sweep(cfg)} new rows in {cfg['output_dir']}/results.csv")
 
 
-def _cmd_report(args) -> None:
+def report(args):
     import pandas as pd
-    from splataudit.runner import report
 
-    df = pd.read_csv(args.results)
-    summary = report(df, group_by=args.group_by)
+    from splataudit.runner import report as summarize
 
-    if args.latex:
-        print(summary.to_latex(float_format="%.3f"))
-    else:
-        print(summary.to_string())
+    summary = summarize(pd.read_csv(args.results))
+    print(summary.to_latex(float_format="%.3f") if args.latex else summary.to_string())
+
+
+if __name__ == "__main__":
+    main()

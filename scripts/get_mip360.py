@@ -2,6 +2,7 @@
 #
 #  python scripts/get_mip360.py list
 #  python scripts/get_mip360.py get bicycle garden room counter - 7.6 GB
+#  python scripts/get_mip360.py get --small - only sparse/0, poses_bounds, images_8 (splits + training)
 #
 import io
 import sys
@@ -28,7 +29,10 @@ def list_archives():
             print(f"  {s:10s} {SIZES[s]:5.2f} GB")
         for n in names[:5]:
             print("   ", n)
-def get(scenes):
+SMALL_PARTS = ("sparse/", "poses_bounds.npy", "images_8/")
+
+
+def get(scenes, small=False):
     want = set(scenes)
     unknown = want - set(SIZES)
     if unknown:
@@ -42,6 +46,8 @@ def get(scenes):
             continue
         z = open_zip(name)
         sel = [n for n in z.namelist() if n.split("/")[0] in pick]
+        if small:
+            sel = [n for n in sel if n.split("/", 1)[-1].startswith(SMALL_PARTS)]
         gb = sum(z.getinfo(n).file_size for n in sel) / 2 ** 30
         print(f"{name}: {sorted(pick)}, {len(sel)} files, {gb:.2f} GB")
         for i, n in enumerate(sel, 1):
@@ -53,6 +59,7 @@ if __name__ == "__main__":
     if not args or args[0] == "list":
         list_archives()
     elif args[0] == "get":
-        get(args[1:] or STANDARD)
+        small = "--small" in args
+        get([a for a in args[1:] if a != "--small"] or STANDARD, small)
     else:
-        print("usage: get_mip360.py list | get <scene>...")
+        print("usage: get_mip360.py list | get [<scene>...] [--small]")
