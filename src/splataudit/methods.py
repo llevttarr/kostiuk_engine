@@ -101,6 +101,7 @@ class Method:
 
 class Vanilla(Method):
     """Standard 3DGS with no additional regularisation (Kerbl et al., 2023)."""
+
     pass
 
 

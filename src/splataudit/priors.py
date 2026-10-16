@@ -6,7 +6,6 @@ import numpy as np
 
 from splataudit.data import Scene
 
-
 _DEPTH_MODEL_ID = "depth-anything/Depth-Anything-V2-Large-hf"
 
 
@@ -58,7 +57,7 @@ def depth_prior(
     missing: list[int] = []
 
     for iid in view_ids:
-        cam  = scene.get_camera(iid)
+        cam = scene.get_camera(iid)
         path = _cache_path(cam, scene, cache_root)
         if path.exists():
             results[iid] = np.load(str(path))
@@ -69,8 +68,8 @@ def depth_prior(
         return results
 
     try:
-        from transformers import pipeline as hf_pipeline
         from PIL import Image as PILImage
+        from transformers import pipeline as hf_pipeline
     except ImportError:
         raise ImportError(
             "Depth Anything V2 requires: pip install splataudit[priors]\n"
@@ -81,18 +80,19 @@ def depth_prior(
     pipe = hf_pipeline(
         task="depth-estimation",
         model=_DEPTH_MODEL_ID,
-        device=0,    # first GPU; falls back to CPU if unavailable
+        device=0,  # first GPU; falls back to CPU if unavailable
     )
 
     for iid in missing:
-        cam     = scene.get_camera(iid)
+        cam = scene.get_camera(iid)
         img_pil = PILImage.fromarray(cam.load_image())
-        result  = pipe(img_pil)
+        result = pipe(img_pil)
 
         # raw model output (relative disparity); "depth" is an 8-bit visualisation
         disp = result["predicted_depth"].squeeze().detach().cpu().numpy().astype(np.float32)
         if disp.shape != (cam.height, cam.width):
             import cv2
+
             disp = cv2.resize(disp, (cam.width, cam.height), interpolation=cv2.INTER_LINEAR)
         depth = disp
 
@@ -148,28 +148,28 @@ def confidence(
     textureless / sky regions → CrossViewGating suppresses densification.
     """
     near, far = scene.bounds
-    depth_scale = far - near          # pseudo-metric scale reference
+    depth_scale = far - near  # pseudo-metric scale reference
 
     results: dict[int, np.ndarray] = {}
     train_cam_map = {iid: scene.get_camera(iid) for iid in train_ids}
 
     for iid in train_ids:
         cam_i = train_cam_map[iid]
-        d_i   = _normalise_depth(depths[iid])
-        H, W  = d_i.shape
+        d_i = _normalise_depth(depths[iid])
+        H, W = d_i.shape
 
         disc_sum = np.zeros((H, W), dtype=np.float64)
-        n_pairs  = 0
+        n_pairs = 0
 
         for jid in train_ids:
             if jid == iid:
                 continue
             cam_j = train_cam_map[jid]
-            d_j   = _normalise_depth(depths[jid])
+            d_j = _normalise_depth(depths[jid])
 
             disc = _pairwise_discrepancy(cam_i, d_i, cam_j, d_j, depth_scale)
             disc_sum += disc
-            n_pairs  += 1
+            n_pairs += 1
 
         mean_disc = disc_sum / max(n_pairs, 1)
         results[iid] = np.exp(-mean_disc * 5.0).astype(np.float32)
@@ -179,8 +179,14 @@ def confidence(
 
 def _cache_path(cam, scene: Scene, cache_root: str | Path) -> Path:
     model = _DEPTH_MODEL_ID.split("/")[-1]
-    return (Path(cache_root) / "depth" / scene.dataset / scene.name
-            / f"{model}_{cam.width}x{cam.height}" / f"{Path(cam.name).stem}.npy")
+    return (
+        Path(cache_root)
+        / "depth"
+        / scene.dataset
+        / scene.name
+        / f"{model}_{cam.width}x{cam.height}"
+        / f"{Path(cam.name).stem}.npy"
+    )
 
 
 def _normalise_depth(d: np.ndarray, lo: float = 2.0, hi: float = 98.0) -> np.ndarray:
@@ -214,22 +220,21 @@ def _pairwise_discrepancy(
     import torch.nn.functional as F
 
     H, W = d_i_norm.shape
-    u, v = np.meshgrid(np.arange(W, dtype=np.float64),
-                       np.arange(H, dtype=np.float64))
+    u, v = np.meshgrid(np.arange(W, dtype=np.float64), np.arange(H, dtype=np.float64))
 
     # Pseudo-metric depth (depth_scale * normalised)
     z_i = d_i_norm.astype(np.float64) * depth_scale + 1e-6
 
     # Unproject pixels from cam_i to world
-    x_cam = (u - cam_i.cx) / cam_i.fx * z_i    # (H, W)
+    x_cam = (u - cam_i.cx) / cam_i.fx * z_i  # (H, W)
     y_cam = (v - cam_i.cy) / cam_i.fy * z_i
     pts_cam_i = np.stack([x_cam, y_cam, z_i], axis=-1).reshape(-1, 3)  # (HW, 3)
 
     # World coordinates: p_world = R_i^T @ (p_cam - t_i)
-    pts_world = (pts_cam_i - cam_i.t) @ cam_i.R   # (HW, 3)
+    pts_world = (pts_cam_i - cam_i.t) @ cam_i.R  # (HW, 3)
 
     # Project into cam_j: p_cam_j = R_j @ p_world + t_j
-    pts_cam_j = pts_world @ cam_j.R.T + cam_j.t   # (HW, 3)
+    pts_cam_j = pts_world @ cam_j.R.T + cam_j.t  # (HW, 3)
 
     z_j = pts_cam_j[:, 2].reshape(H, W)
     u_j = (pts_cam_j[:, 0] / pts_cam_j[:, 2].clip(1e-6) * cam_j.fx + cam_j.cx).reshape(H, W)
@@ -239,23 +244,23 @@ def _pairwise_discrepancy(
     in_frustum = (u_j >= 0) & (u_j < Wj) & (v_j >= 0) & (v_j < Hj) & (z_j > 0)
 
     # Sample d_j at projected locations via bilinear interpolation
-    d_j_t = torch.tensor(d_j_norm).unsqueeze(0).unsqueeze(0)   # (1,1,Hj,Wj)
-    gx    = torch.tensor(2.0 * u_j / (Wj - 1) - 1.0, dtype=torch.float32)
-    gy    = torch.tensor(2.0 * v_j / (Hj - 1) - 1.0, dtype=torch.float32)
-    grid  = torch.stack([gx, gy], dim=-1).unsqueeze(0)         # (1,H,W,2)
+    d_j_t = torch.tensor(d_j_norm).unsqueeze(0).unsqueeze(0)  # (1,1,Hj,Wj)
+    gx = torch.tensor(2.0 * u_j / (Wj - 1) - 1.0, dtype=torch.float32)
+    gy = torch.tensor(2.0 * v_j / (Hj - 1) - 1.0, dtype=torch.float32)
+    grid = torch.stack([gx, gy], dim=-1).unsqueeze(0)  # (1,H,W,2)
     d_j_sampled = F.grid_sample(
         d_j_t, grid, align_corners=True, mode="bilinear", padding_mode="border"
-    )[0, 0].numpy()                                              # (H, W)
+    )[0, 0].numpy()  # (H, W)
 
     # Per-pair affine alignment in the overlap region (corrects scale/shift)
-    d_proj_norm = (z_j / depth_scale).clip(0.0, 1.0)           # normalise projected depth
+    d_proj_norm = (z_j / depth_scale).clip(0.0, 1.0)  # normalise projected depth
     a, b = _affine_fit(d_j_sampled[in_frustum], d_proj_norm[in_frustum])
     d_j_aligned = a * d_j_sampled + b
 
     # Discrepancy: L1 after affine correction
     disc = np.zeros((H, W), dtype=np.float64)
-    disc[in_frustum]  = np.abs(d_proj_norm[in_frustum] - d_j_aligned[in_frustum])
-    disc[~in_frustum] = 1.0     # invisible regions → maximum discrepancy
+    disc[in_frustum] = np.abs(d_proj_norm[in_frustum] - d_j_aligned[in_frustum])
+    disc[~in_frustum] = 1.0  # invisible regions → maximum discrepancy
 
     return disc
 
@@ -267,6 +272,6 @@ def _affine_fit(src: np.ndarray, dst: np.ndarray) -> tuple[float, float]:
     """
     if len(src) < 10:
         return 1.0, 0.0
-    A  = np.stack([src, np.ones_like(src)], axis=1)
+    A = np.stack([src, np.ones_like(src)], axis=1)
     ab, _, _, _ = np.linalg.lstsq(A, dst, rcond=None)
     return float(ab[0]), float(ab[1])

@@ -10,16 +10,28 @@ import numpy as np
 
 RUN_KEYS = ["dataset", "scene", "n_views", "protocol", "k", "init", "method", "seed"]
 
-FIELDS = RUN_KEYS + [
+FIELDS = [
+    *RUN_KEYS,
     "test_image",
     "in_test",
-    "ang_dist_centre", "ang_dist_optical", "dist_bin",
-    "psnr", "ssim", "lpips_vgg", "lpips_alex",
-    "psnr_masked", "ssim_masked", "lpips_vgg_masked", "lpips_alex_masked",
+    "ang_dist_centre",
+    "ang_dist_optical",
+    "dist_bin",
+    "psnr",
+    "ssim",
+    "lpips_vgg",
+    "lpips_alex",
+    "psnr_masked",
+    "ssim_masked",
+    "lpips_vgg_masked",
+    "lpips_alex_masked",
     "floater_proxy",
-    "n_gaussians", "train_time_s",
-    "git_commit", "config_hash",
-    "status", "error",
+    "n_gaussians",
+    "train_time_s",
+    "git_commit",
+    "config_hash",
+    "status",
+    "error",
 ]
 
 
@@ -59,8 +71,10 @@ def run_key(cfg):
 def run_tag(cfg):
     """Run directory name, includes every run key."""
     k = "" if cfg.get("k") is None else f"_k{cfg['k']}"
-    return (f"{cfg['dataset']}/{cfg['scene']}/{cfg['protocol']}_{cfg['n_views']}v{k}/"
-            f"init={cfg['init']}__method={cfg['method']}__seed={cfg['seed']}")
+    return (
+        f"{cfg['dataset']}/{cfg['scene']}/{cfg['protocol']}_{cfg['n_views']}v{k}/"
+        f"init={cfg['init']}__method={cfg['method']}__seed={cfg['seed']}"
+    )
 
 
 def append_rows(path, rows):
@@ -93,10 +107,12 @@ def config_hash(cfg):
 
 def git_commit():
     try:
-        sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True,
-                             text=True, check=True).stdout.strip()
-        dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"],
-                               capture_output=True, text=True).stdout.strip()
+        sha = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=True
+        ).stdout.strip()
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"], capture_output=True, text=True
+        ).stdout.strip()
         return sha + ("-dirty" if dirty else "")
     except (OSError, subprocess.CalledProcessError):
         return "unknown"

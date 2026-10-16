@@ -1,4 +1,21 @@
 # KOSTIUK engine
+
+## PRECOMMIT AND STYLING !
+
+```bash
+# precommit config (after git clone one time)
+pip install pre-commit && pre-commit install
+# after this just commit, ruff will work on its own
+
+
+# manual 
+ruff format src/        # format
+ruff check src/         # lint
+ruff check src/ --fix   # lint + autocorrect
+```
+
+**please dont avoid precommit warnings**
+
 ## usage
 
 ```bash

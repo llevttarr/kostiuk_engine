@@ -20,11 +20,11 @@ _C0 = 0.28209479177387814
 
 def train(
     cfg: dict,
-    scene: "Scene",
+    scene: Scene,
     train_ids: list[int],
     xyz: np.ndarray,
     rgb: np.ndarray,
-    method: "Method",
+    method: Method,
     depths: dict[int, np.ndarray] | None = None,
     confidence: dict[int, np.ndarray] | None = None,
 ) -> dict:
@@ -95,47 +95,46 @@ def train(
     ssim_fn = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
 
     for step in trange(tc["iterations"], desc="Training", dynamic_ncols=True):
-
         # SH degree increases every 1 000 steps up to the configured maximum
         sh_degree = min(tc["sh_degree"], step // 1000)
 
         cam = sampler.next()
         viewmat = torch.tensor(cam.w2c, dtype=torch.float32, device=device).unsqueeze(0)
-        K_mat   = torch.tensor(cam.K,   dtype=torch.float32, device=device).unsqueeze(0)
-        gt_img  = _load_gt(cam, device)          # (1, 3, H, W) float32 [0,1]
+        K_mat = torch.tensor(cam.K, dtype=torch.float32, device=device).unsqueeze(0)
+        gt_img = _load_gt(cam, device)  # (1, 3, H, W) float32 [0,1]
 
         batch = {
-            "camera":     cam,
-            "gt_image":   gt_img,
-            "depth":      d_gpu.get(cam.image_id),
+            "camera": cam,
+            "gt_image": gt_img,
+            "depth": d_gpu.get(cam.image_id),
             "confidence": c_gpu.get(cam.image_id),
         }
 
         rp = method.pre_render(dict(params), step)
 
         renders, alphas, info = rasterization(
-            means     = rp["means"],
-            quats     = F.normalize(rp["quats"], dim=-1),
-            scales    = torch.exp(rp["scales"]),
-            opacities = torch.sigmoid(rp["opacities"]),
-            colors    = torch.cat([rp["sh0"], rp["shN"]], dim=1),   # (N, K, 3)
-            viewmats  = viewmat,
-            Ks        = K_mat,
-            width     = cam.width,
-            height    = cam.height,
-            sh_degree = sh_degree,
-            render_mode = "RGB+D",
-            packed    = False,
+            means=rp["means"],
+            quats=F.normalize(rp["quats"], dim=-1),
+            scales=torch.exp(rp["scales"]),
+            opacities=torch.sigmoid(rp["opacities"]),
+            colors=torch.cat([rp["sh0"], rp["shN"]], dim=1),  # (N, K, 3)
+            viewmats=viewmat,
+            Ks=K_mat,
+            width=cam.width,
+            height=cam.height,
+            sh_degree=sh_degree,
+            render_mode="RGB+D",
+            packed=False,
         )
         # renders: (1, H, W, 4);  last channel = depth
-        render_rgb   = renders[0, :, :, :3].permute(2, 0, 1).unsqueeze(0)   # (1,3,H,W)
-        render_depth = renders[0, :, :,  3]                                   # (H,W)
+        render_rgb = renders[0, :, :, :3].permute(2, 0, 1).unsqueeze(0)  # (1,3,H,W)
+        render_depth = renders[0, :, :, 3]  # (H,W)
 
         render_out = {"rgb": render_rgb, "depth": render_depth, "alpha": alphas[0]}
 
-        l1   = F.l1_loss(render_rgb, gt_img)
+        l1 = F.l1_loss(render_rgb, gt_img)
         lssim = 1.0 - ssim_fn(render_rgb, gt_img)
-        loss  = (1.0 - tc["lambda_dssim"]) * l1 + tc["lambda_dssim"] * lssim
+        loss = (1.0 - tc["lambda_dssim"]) * l1 + tc["lambda_dssim"] * lssim
 
         for lval in method.extra_loss(render_out, batch, step).values():
             loss = loss + lval
@@ -146,10 +145,7 @@ def train(
 
         # Zero out means2d grads for ineligible Gaussians *before* the
         # strategy reads them for threshold-based clone/split decisions.
-        if (
-            info.get("means2d") is not None
-            and getattr(info["means2d"], "grad", None) is not None
-        ):
+        if info.get("means2d") is not None and getattr(info["means2d"], "grad", None) is not None:
             dmask = method.densify_mask(info["means2d"].grad, dict(params), step)
             if dmask is not None:
                 # means2d.grad is (C, N, 2) with packed=False; dmask is (N,)
@@ -168,7 +164,7 @@ def train(
         method.post_step(dict(params), step)
 
     return {k: v.detach().cpu() for k, v in params.items()} | {
-        "sh_degree":   tc["sh_degree"],
+        "sh_degree": tc["sh_degree"],
         "n_gaussians": params["means"].shape[0],
     }
 
@@ -180,40 +176,40 @@ def _init_gaussians(
     device: torch.device,
 ) -> dict[str, torch.nn.Parameter]:
     """Initialise all 3DGS parameters from a point cloud (xyz, rgb)."""
-    N    = len(xyz)
+    N = len(xyz)
     n_sh = (sh_degree + 1) ** 2
 
     # Log-scale: mean distance to 3 nearest neighbours, replicated for x/y/z
     tree = KDTree(xyz)
-    dists, _ = tree.query(xyz, k=4)                   # (N,4); col 0 = self
+    dists, _ = tree.query(xyz, k=4)  # (N,4); col 0 = self
     nn_dist = dists[:, 1:].mean(axis=1).clip(min=1e-7)
     log_scales = np.log(nn_dist[:, None].repeat(3, axis=1)).astype(np.float32)
 
     # SH DC component from RGB: sigmoid(rgb) ≈ C0 * sh0 + 0.5 → sh0 = (rgb−0.5)/C0
-    sh0 = ((rgb.clip(0, 1) - 0.5) / _C0).astype(np.float32)[:, None, :]   # (N,1,3)
+    sh0 = ((rgb.clip(0, 1) - 0.5) / _C0).astype(np.float32)[:, None, :]  # (N,1,3)
 
     def P(arr):
         return torch.nn.Parameter(torch.tensor(arr, dtype=torch.float32, device=device))
 
     return {
-        "means":     P(xyz.astype(np.float32)),
-        "quats":     P(np.tile([1., 0., 0., 0.], (N, 1))),
-        "scales":    P(log_scales),
-        "opacities": P(np.full(N, -2.197, dtype=np.float32)),   # sigmoid⁻¹(0.1)
-        "sh0":       P(sh0),
-        "shN":       P(np.zeros((N, n_sh - 1, 3), dtype=np.float32)),
+        "means": P(xyz.astype(np.float32)),
+        "quats": P(np.tile([1.0, 0.0, 0.0, 0.0], (N, 1))),
+        "scales": P(log_scales),
+        "opacities": P(np.full(N, -2.197, dtype=np.float32)),  # sigmoid⁻¹(0.1)
+        "sh0": P(sh0),
+        "shN": P(np.zeros((N, n_sh - 1, 3), dtype=np.float32)),
     }
 
 
 def _make_optimizers(params: dict, scene_scale: float) -> dict[str, torch.optim.Adam]:
     # 3DGS defaults; position lr is relative to the scene scale
     lr = {
-        "means":     1.6e-4 * scene_scale,
-        "quats":     1e-3,
-        "scales":    5e-3,
+        "means": 1.6e-4 * scene_scale,
+        "quats": 1e-3,
+        "scales": 5e-3,
         "opacities": 5e-2,
-        "sh0":       2.5e-3,
-        "shN":       2.5e-3 / 20,   # higher-order SH trained slower
+        "sh0": 2.5e-3,
+        "shN": 2.5e-3 / 20,  # higher-order SH trained slower
     }
     return {k: torch.optim.Adam([v], lr=lr[k], eps=1e-15) for k, v in params.items()}
 
@@ -223,7 +219,7 @@ def _set_lr(optimizer: torch.optim.Adam, lr: float) -> None:
         pg["lr"] = lr
 
 
-def _load_gt(cam: "Camera", device: torch.device) -> torch.Tensor:  # noqa: F821
+def _load_gt(cam: Camera, device: torch.device) -> torch.Tensor:  # noqa: F821
     """Load and normalise a ground-truth image → (1, 3, H, W) float32 [0,1]."""
     img = cam.load_image().astype(np.float32) / 255.0
     return torch.tensor(img, device=device).permute(2, 0, 1).unsqueeze(0)

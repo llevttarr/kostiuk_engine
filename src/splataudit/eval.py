@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 def evaluate(
     cfg: dict,
-    scene: "Scene",
+    scene: Scene,
     state: dict,
     record: dict,
 ) -> list[dict]:
@@ -44,15 +44,17 @@ def evaluate(
 
     params = {k: v.to(device) for k, v in state.items() if isinstance(v, torch.Tensor)}
     sh_degree = int(state["sh_degree"])
-    lpips = {net: LearnedPerceptualImagePatchSimilarity(net_type=net, normalize=True).to(device)
-             for net in ec.get("lpips_nets", ["vgg", "alex"])}
+    lpips = {
+        net: LearnedPerceptualImagePatchSimilarity(net_type=net, normalize=True).to(device)
+        for net in ec.get("lpips_nets", ["vgg", "alex"])
+    }
 
     test_set = set(record["test"])
     rows: list[dict] = []
     for name in record["eval_all"]:
         cam = scene.by_name(name)
         render, _ = _render(params, sh_degree, cam, device, mode="RGB")
-        pred = render[..., :3].permute(2, 0, 1).unsqueeze(0).clamp(0.0, 1.0)   # (1,3,H,W)
+        pred = render[..., :3].permute(2, 0, 1).unsqueeze(0).clamp(0.0, 1.0)  # (1,3,H,W)
         gt = _to_tensor(cam.load_image(), device)
 
         dist = record["distances"][name]
@@ -76,7 +78,9 @@ def evaluate(
             fg = m.bool().expand_as(pred)
             row["psnr_masked"] = float(-10.0 * torch.log10(((pred - gt)[fg] ** 2).mean()))
             pred_w, gt_w = pred * m + (1 - m), gt * m + (1 - m)
-            row["ssim_masked"] = float(structural_similarity_index_measure(pred_w, gt_w, data_range=1.0))
+            row["ssim_masked"] = float(
+                structural_similarity_index_measure(pred_w, gt_w, data_range=1.0)
+            )
             for net, fn in lpips.items():
                 row[f"lpips_{net}_masked"] = float(fn(pred_w, gt_w))
 
@@ -90,8 +94,14 @@ def _to_tensor(img: np.ndarray, device: torch.device) -> torch.Tensor:
     return torch.tensor(img.astype(np.float32) / 255.0, device=device).permute(2, 0, 1).unsqueeze(0)
 
 
-def _render(params: dict, sh_degree: int, cam, device: torch.device,
-            mode: str, viewmat: torch.Tensor | None = None):
+def _render(
+    params: dict,
+    sh_degree: int,
+    cam,
+    device: torch.device,
+    mode: str,
+    viewmat: torch.Tensor | None = None,
+):
     from gsplat import rasterization
 
     if viewmat is None:
@@ -105,14 +115,23 @@ def _render(params: dict, sh_degree: int, cam, device: torch.device,
             colors=torch.cat([params["sh0"], params["shN"]], dim=1),
             viewmats=viewmat.unsqueeze(0),
             Ks=torch.tensor(cam.K, dtype=torch.float32, device=device).unsqueeze(0),
-            width=cam.width, height=cam.height,
-            sh_degree=sh_degree, render_mode=mode, packed=False,
+            width=cam.width,
+            height=cam.height,
+            sh_degree=sh_degree,
+            render_mode=mode,
+            packed=False,
         )
     return out[0], alphas[0]
 
 
-def _floater_proxy(params: dict, sh_degree: int, cam, device: torch.device,
-                   rel_eps: float = 0.01, rel_thresh: float = 0.20) -> float:
+def _floater_proxy(
+    params: dict,
+    sh_degree: int,
+    cam,
+    device: torch.device,
+    rel_eps: float = 0.01,
+    rel_thresh: float = 0.20,
+) -> float:
     """
     Depth-consistency floater proxy (secondary metric; geometry is not an RQ).
 

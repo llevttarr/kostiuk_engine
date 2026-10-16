@@ -9,7 +9,9 @@ METHODS = ["vanilla", "fsgs", "dngaussian", "dropgaussian", "cross_view_gating"]
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="splataudit", description="few-shot 3dgs audit: init x method x protocol")
+    parser = argparse.ArgumentParser(
+        prog="splataudit", description="few-shot 3dgs audit: init x method x protocol"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("make-splits", help="write p0 / p2 split files")
@@ -22,7 +24,9 @@ def main():
     p.add_argument("--cache", default="cache")
     p.add_argument("--init", nargs="+", default=["random", "sparse_sfm"], choices=INITS)
     p.add_argument("--protocol", nargs="+", default=["p0", "p2"], choices=["p0", "p2"])
-    p.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2], help="for the seeded inits (random)")
+    p.add_argument(
+        "--seeds", nargs="+", type=int, default=[0, 1, 2], help="for the seeded inits (random)"
+    )
     p.add_argument("--overwrite", action="store_true")
 
     p = sub.add_parser("run", help="run one experiment cell")
@@ -45,8 +49,13 @@ def main():
     p.add_argument("--latex", action="store_true")
 
     args = parser.parse_args()
-    {"make-splits": make_splits, "make-inits": make_inits, "run": run,
-     "sweep": sweep, "report": report}[args.command](args)
+    {
+        "make-splits": make_splits,
+        "make-inits": make_inits,
+        "run": run,
+        "sweep": sweep,
+        "report": report,
+    }[args.command](args)
 
 
 def add_data_args(p):
@@ -69,8 +78,10 @@ def make_splits(args):
     from splataudit.data import load_scene
     from splataudit.splits import make_split, save_split, split_path
 
-    print(f"{'dataset':7s} {'scene':9s} {'N':>4s}  split      {'#test':>5s} {'test°mean':>9s} "
-          f"{'test°max':>8s}  {'#≤5°':>5s} of eval_all")
+    print(
+        f"{'dataset':7s} {'scene':9s} {'N':>4s}  split      {'#test':>5s} {'test°mean':>9s} "
+        f"{'test°max':>8s}  {'#≤5°':>5s} of eval_all"
+    )
     for ds, name, n, jobs in scene_jobs(args):
         scene = load_scene(args.data_root, ds, name)
         for protocol, k in jobs:
@@ -79,8 +90,10 @@ def make_splits(args):
             save_split(path, rec)
             t = np.array([rec["distances"][v]["centre_deg"] for v in rec["test"]])
             a = np.array([rec["distances"][v]["centre_deg"] for v in rec["eval_all"]])
-            print(f"{ds:7s} {name:9s} {len(scene):4d}  {path.stem:10s} {len(t):5d} {t.mean():9.2f} "
-                  f"{t.max():8.2f}  {int((a < 5).sum()):5d}/{len(a)}")
+            print(
+                f"{ds:7s} {name:9s} {len(scene):4d}  {path.stem:10s} {len(t):5d} {t.mean():9.2f} "
+                f"{t.max():8.2f}  {int((a < 5).sum()):5d}/{len(a)}"
+            )
 
 
 def make_inits(args):
@@ -96,11 +109,15 @@ def make_inits(args):
             path = split_path(args.splits, ds, name, protocol, n, k)
             train_ids = resolve(scene, load_split(path))["train"]
             for init in args.init:
-                for seed in (args.seeds if init in SEEDED_INITS else [None]):
-                    s = build_init(init, scene, train_ids, path.stem, seed, args.cache, args.overwrite)
+                for seed in args.seeds if init in SEEDED_INITS else [None]:
+                    s = build_init(
+                        init, scene, train_ids, path.stem, seed, args.cache, args.overwrite
+                    )
                     tag = f" seed={seed}" if seed is not None else ""
-                    print(f"{ds}/{name}/{path.stem} {init}{tag}: {s['status']}, "
-                          f"{s.get('n_points', 0)} points, coverage {s.get('coverage', float('nan')):.3f}")
+                    print(
+                        f"{ds}/{name}/{path.stem} {init}{tag}: {s['status']}, "
+                        f"{s.get('n_points', 0)} points, coverage {s.get('coverage', float('nan')):.3f}"
+                    )
 
 
 def run(args):
@@ -117,7 +134,8 @@ def run(args):
 
 
 def sweep(args):
-    from splataudit.runner import load_config, sweep as run_sweep
+    from splataudit.runner import load_config
+    from splataudit.runner import sweep as run_sweep
 
     cfg = load_config(args.config)
     if args.output_dir:

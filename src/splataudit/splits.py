@@ -33,7 +33,9 @@ def make_split(scene, protocol, n_views, k=None):
     else:
         raise ValueError(f"unknown protocol {protocol}")
 
-    assert not set(train) & set(eval_all) and set(test) <= set(eval_all), "train views leak into eval"
+    assert not set(train) & set(eval_all) and set(test) <= set(eval_all), (
+        "train views leak into eval"
+    )
     return {
         "version": SPLIT_VERSION,
         "dataset": scene.dataset,
@@ -95,7 +97,9 @@ def view_distances(scene, train_ids, view_ids):
 
 def distance_bin(deg):
     """P1 group label of an angle in degrees."""
-    for lo, hi in zip(DISTANCE_BINS[:-1], DISTANCE_BINS[1:]):
+    import itertools
+
+    for lo, hi in itertools.pairwise(DISTANCE_BINS):
         if lo <= deg < hi:
             return f"{lo:g}-{hi:g}" if math.isfinite(hi) else f">{lo:g}"
 
@@ -152,8 +156,8 @@ def p2_ids(scene, n, k):
         test = [ordered[(start + i) % N] for i in range(K)]
         rest = [ordered[(start + K + B + i) % N] for i in range(N - K - 2 * B)]
     else:
-        test = ordered[:K] if k == 0 else ordered[N - K:]
-        rest = ordered[K + B:] if k == 0 else ordered[:N - K - B]
+        test = ordered[:K] if k == 0 else ordered[N - K :]
+        rest = ordered[K + B :] if k == 0 else ordered[: N - K - B]
     train = _evenly_spaced(rest, n)
     return sorted(train), sorted(test), [i for i in pool if i not in train], ordering, B
 

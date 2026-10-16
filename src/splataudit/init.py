@@ -21,9 +21,15 @@ FSGS_SFM = {  # tools/colmap_llff.py
     "ba_global_max_num_iterations": 100,
     "num_threads": -1,
 }
-SMOKE_SFM = {**FSGS_SFM, "max_image_size": 1008, "max_num_features": 8192,
-             "estimate_affine_shape": False, "domain_size_pooling": False,
-             "guided_matching": False, "num_threads": 2}
+SMOKE_SFM = {
+    **FSGS_SFM,
+    "max_image_size": 1008,
+    "max_num_features": 8192,
+    "estimate_affine_shape": False,
+    "domain_size_pooling": False,
+    "guided_matching": False,
+    "num_threads": 2,
+}
 
 
 def init_path(cache, dataset, scene, split_stem, init, seed):
@@ -40,8 +46,14 @@ def build_init(name, scene, train_ids, split_stem, seed, cache, overwrite=False)
         if cached["status"] == "ok":
             return cached
 
-    stats = {"dataset": scene.dataset, "scene": scene.name, "split": split_stem, "init": name,
-             "seed": seed if name in SEEDED_INITS else None, "train": scene.names(train_ids)}
+    stats = {
+        "dataset": scene.dataset,
+        "scene": scene.name,
+        "split": split_stem,
+        "init": name,
+        "seed": seed if name in SEEDED_INITS else None,
+        "train": scene.names(train_ids),
+    }
     if name in ("sparse_sfm", "dense_mvs"):
         stats["sfm_settings"] = sfm_settings(scene.dataset)
     t0 = time.time()
@@ -94,8 +106,11 @@ def init_quality(scene, train_ids, xyz, cell=8):
         gw, gh = -(-cam.width // cell), -(-cam.height // cell)
         cells = np.unique((v[inside] // cell).astype(int) * gw + (u[inside] // cell).astype(int))
         cov.append(len(cells) / (gw * gh))
-    return {"n_points": len(xyz), "coverage": round(float(np.mean(cov)), 4),
-            "coverage_per_view": [round(float(c), 4) for c in cov]}
+    return {
+        "n_points": len(xyz),
+        "coverage": round(float(np.mean(cov)), 4),
+        "coverage_per_view": [round(float(c), 4) for c in cov],
+    }
 
 
 def random_init(scene, train_ids, seed, n_points=100_000):
@@ -175,9 +190,14 @@ def triangulate(scene, train_ids, tmp, s):
     ext.sift.max_num_features = s["max_num_features"]
     ext.sift.estimate_affine_shape = s["estimate_affine_shape"]
     ext.sift.domain_size_pooling = s["domain_size_pooling"]
-    pycolmap.extract_features(db, img_dir, image_names=[c.name for c in cams],
-                              camera_mode=pycolmap.CameraMode.SINGLE,
-                              reader_options=reader, extraction_options=ext)
+    pycolmap.extract_features(
+        db,
+        img_dir,
+        image_names=[c.name for c in cams],
+        camera_mode=pycolmap.CameraMode.SINGLE,
+        reader_options=reader,
+        extraction_options=ext,
+    )
 
     match = pycolmap.FeatureMatchingOptions()
     match.guided_matching = s["guided_matching"]
@@ -193,7 +213,8 @@ def triangulate(scene, train_ids, tmp, s):
         c = scene.by_name(im.name)
         rec.add_image_with_trivial_frame(
             pycolmap.Image(name=im.name, camera_id=im.camera_id, image_id=im.image_id),
-            pycolmap.Rigid3d(pycolmap.Rotation3d(c.R), c.t))
+            pycolmap.Rigid3d(pycolmap.Rotation3d(c.R), c.t),
+        )
     database.close()
 
     opts = pycolmap.IncrementalPipelineOptions()
@@ -204,7 +225,9 @@ def triangulate(scene, train_ids, tmp, s):
     return pycolmap.triangulate_points(rec, db, img_dir, tmp / "triangulated", options=opts)
 
 
-PLY_DTYPE = np.dtype([("x", "<f4"), ("y", "<f4"), ("z", "<f4"), ("red", "u1"), ("green", "u1"), ("blue", "u1")])
+PLY_DTYPE = np.dtype(
+    [("x", "<f4"), ("y", "<f4"), ("z", "<f4"), ("red", "u1"), ("green", "u1"), ("blue", "u1")]
+)
 
 
 def write_ply(path, xyz, rgb):
@@ -214,9 +237,11 @@ def write_ply(path, xyz, rgb):
     data = np.empty(len(xyz), dtype=PLY_DTYPE)
     data["x"], data["y"], data["z"] = np.asarray(xyz, np.float32).T
     data["red"], data["green"], data["blue"] = np.clip(np.round(np.asarray(rgb) * 255), 0, 255).T
-    header = (f"ply\nformat binary_little_endian 1.0\nelement vertex {len(data)}\n"
-              "property float x\nproperty float y\nproperty float z\n"
-              "property uchar red\nproperty uchar green\nproperty uchar blue\nend_header\n")
+    header = (
+        f"ply\nformat binary_little_endian 1.0\nelement vertex {len(data)}\n"
+        "property float x\nproperty float y\nproperty float z\n"
+        "property uchar red\nproperty uchar green\nproperty uchar blue\nend_header\n"
+    )
     path.write_bytes(header.encode("ascii") + data.tobytes())
 
 
@@ -224,7 +249,13 @@ def read_ply(path):
     """Ply from write_ply -> (xyz float32, rgb float32 in [0, 1])."""
     raw = Path(path).read_bytes()
     end = raw.index(b"end_header\n") + len(b"end_header\n")
-    n = int(next(l.split()[-1] for l in raw[:end].decode().splitlines() if l.startswith("element vertex")))
+    n = int(
+        next(
+            line.split()[-1]
+            for line in raw[:end].decode().splitlines()
+            if line.startswith("element vertex")
+        )
+    )
     d = np.frombuffer(raw[end:], dtype=PLY_DTYPE, count=n)
     xyz = np.stack([d["x"], d["y"], d["z"]], axis=1).astype(np.float32)
     rgb = np.stack([d["red"], d["green"], d["blue"]], axis=1).astype(np.float32) / 255
@@ -235,9 +266,28 @@ def read_fused_ply(path):
     """Colmap's fused.ply (x y z nx ny nz r g b) -> (xyz, rgb in [0, 1])."""
     raw = Path(path).read_bytes()
     end = raw.index(b"end_header\n") + len(b"end_header\n")
-    n = int(next(l.split()[-1] for l in raw[:end].decode().splitlines() if l.startswith("element vertex")))
-    dt = np.dtype([("x", "<f4"), ("y", "<f4"), ("z", "<f4"), ("nx", "<f4"), ("ny", "<f4"),
-                   ("nz", "<f4"), ("r", "u1"), ("g", "u1"), ("b", "u1")])
+    n = int(
+        next(
+            line.split()[-1]
+            for line in raw[:end].decode().splitlines()
+            if line.startswith("element vertex")
+        )
+    )
+    dt = np.dtype(
+        [
+            ("x", "<f4"),
+            ("y", "<f4"),
+            ("z", "<f4"),
+            ("nx", "<f4"),
+            ("ny", "<f4"),
+            ("nz", "<f4"),
+            ("r", "u1"),
+            ("g", "u1"),
+            ("b", "u1"),
+        ]
+    )
     d = np.frombuffer(raw[end:], dtype=dt, count=n)
-    return (np.stack([d["x"], d["y"], d["z"]], 1).astype(np.float32),
-            np.stack([d["r"], d["g"], d["b"]], 1).astype(np.float32) / 255)
+    return (
+        np.stack([d["x"], d["y"], d["z"]], 1).astype(np.float32),
+        np.stack([d["r"], d["g"], d["b"]], 1).astype(np.float32) / 255,
+    )

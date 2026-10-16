@@ -5,13 +5,38 @@ import cv2
 import numpy as np
 
 DATASETS = {
-    "llff": {"image_factor": 8, "n_views": 3,
-             "scenes": ["fern", "flower", "fortress", "horns", "leaves", "orchids", "room", "trex"]},
-    "mip360": {"image_factor": 8, "n_views": 12,
-               "scenes": ["bicycle", "garden", "room", "counter"]},
-    "dtu": {"image_factor": 4, "n_views": 3, "light": 3,
-            "scenes": ["scan8", "scan21", "scan30", "scan31", "scan34", "scan38", "scan40", "scan41",
-                       "scan45", "scan55", "scan63", "scan82", "scan103", "scan110", "scan114"]},
+    "llff": {
+        "image_factor": 8,
+        "n_views": 3,
+        "scenes": ["fern", "flower", "fortress", "horns", "leaves", "orchids", "room", "trex"],
+    },
+    "mip360": {
+        "image_factor": 8,
+        "n_views": 12,
+        "scenes": ["bicycle", "garden", "room", "counter"],
+    },
+    "dtu": {
+        "image_factor": 4,
+        "n_views": 3,
+        "light": 3,
+        "scenes": [
+            "scan8",
+            "scan21",
+            "scan30",
+            "scan31",
+            "scan34",
+            "scan38",
+            "scan40",
+            "scan41",
+            "scan45",
+            "scan55",
+            "scan63",
+            "scan82",
+            "scan103",
+            "scan110",
+            "scan114",
+        ],
+    },
 }
 
 DTU_BOUNDS = (0.5, 3.5)  # regnerf near / far
@@ -19,9 +44,24 @@ DTU_IDR_SCANS = {"scan40", "scan55", "scan63", "scan110", "scan114"}
 
 
 class Camera:
-
-    def __init__(self, image_id, name, image_path, R, t, fx, fy, cx, cy, width, height,
-                 factor=1, mask_path=None, sfm_image_path=None, sfm_camera=None):
+    def __init__(
+        self,
+        image_id,
+        name,
+        image_path,
+        R,
+        t,
+        fx,
+        fy,
+        cx,
+        cy,
+        width,
+        height,
+        factor=1,
+        mask_path=None,
+        sfm_image_path=None,
+        sfm_camera=None,
+    ):
         self.image_id = image_id
         self.name = name
         self.image_path = image_path
@@ -80,7 +120,6 @@ def read_image(path, width, height):
 
 
 class Scene:
-
     def __init__(self, name, dataset, root, cameras, bounds, ref_points=None):
         self.name = name
         self.dataset = dataset
@@ -152,7 +191,7 @@ def load_colmap(root, dataset, factor):
     h, w = cv2.imread(str(files[0])).shape[:2]
 
     cameras = []
-    for i, (im, path) in enumerate(zip(images, files)):
+    for i, (im, path) in enumerate(zip(images, files, strict=True)):
         cam = rec.cameras[im.camera_id]
         p = list(cam.params)
         if cam.model.name in ("PINHOLE", "OPENCV", "OPENCV_FISHEYE", "FULL_OPENCV"):
@@ -161,13 +200,28 @@ def load_colmap(root, dataset, factor):
             fx, fy, cx, cy = p[0], p[0], p[1], p[2]
         sx, sy = w / cam.width, h / cam.height
         pose = im.cam_from_world()
-        cameras.append(Camera(
-            i, im.name, path, np.asarray(pose.rotation.matrix()), np.asarray(pose.translation),
-            fx * sx, fy * sy, cx * sx, cy * sy, w, h,
-            sfm_image_path=root / "images" / im.name,
-            sfm_camera={"model": cam.model.name, "width": cam.width, "height": cam.height,
-                        "params": [float(v) for v in cam.params]},
-        ))
+        cameras.append(
+            Camera(
+                i,
+                im.name,
+                path,
+                np.asarray(pose.rotation.matrix()),
+                np.asarray(pose.translation),
+                fx * sx,
+                fy * sy,
+                cx * sx,
+                cy * sy,
+                w,
+                h,
+                sfm_image_path=root / "images" / im.name,
+                sfm_camera={
+                    "model": cam.model.name,
+                    "width": cam.width,
+                    "height": cam.height,
+                    "params": [float(v) for v in cam.params],
+                },
+            )
+        )
 
     pb = np.load(root / "poses_bounds.npy")
     bounds = (float(pb[:, -2].min()), float(pb[:, -1].max()))
@@ -192,20 +246,38 @@ def load_dtu(root, scan, factor, light):
     mask_dir = root / "idrmasks" / scan / ("mask" if scan in DTU_IDR_SCANS else "")
 
     cameras = []
-    for i, (c2w, K, path) in enumerate(zip(c2ws, Ks, paths)):
+    for i, (c2w, K, path) in enumerate(zip(c2ws, Ks, paths, strict=True)):
         w2c = np.linalg.inv(c2w)
-        cameras.append(Camera(
-            i, path.name, path, w2c[:3, :3], w2c[:3, 3],
-            K[0, 0] / factor, K[1, 1] / factor, K[0, 2] / factor, K[1, 2] / factor, w, h,
-            factor=factor, mask_path=mask_dir / f"{i:03d}.png", sfm_image_path=path,
-            sfm_camera={"model": "PINHOLE", "width": 1600, "height": 1200,
-                        "params": [K[0, 0], K[1, 1], K[0, 2], K[1, 2]]},
-        ))
+        cameras.append(
+            Camera(
+                i,
+                path.name,
+                path,
+                w2c[:3, :3],
+                w2c[:3, 3],
+                K[0, 0] / factor,
+                K[1, 1] / factor,
+                K[0, 2] / factor,
+                K[1, 2] / factor,
+                w,
+                h,
+                factor=factor,
+                mask_path=mask_dir / f"{i:03d}.png",
+                sfm_image_path=path,
+                sfm_camera={
+                    "model": "PINHOLE",
+                    "width": 1600,
+                    "height": 1200,
+                    "params": [K[0, 0], K[1, 1], K[0, 2], K[1, 2]],
+                },
+            )
+        )
     return Scene(scan, "dtu", root / "Rectified" / scan, cameras, DTU_BOUNDS)
 
 
 def dtu_normalise(c2ws):
     """Regnerf recenter_poses + rescale_poses on (N, 4, 4) camera-to-world."""
+
     def unit(v):
         return v / np.linalg.norm(v)
 
