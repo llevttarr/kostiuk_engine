@@ -67,40 +67,66 @@ def depth_prior(
     if not missing:
         return results
 
-    try:
-        from PIL import Image as PILImage
-        from transformers import pipeline as hf_pipeline
-    except ImportError:
-        raise ImportError(
-            "Depth Anything V2 requires: pip install splataudit[priors]\n"
-            "(installs transformers >= 4.44)"
-        ) from None
+    import fcntl
+    import os
 
-    print(f"[priors] Loading {_DEPTH_MODEL_ID} for {len(missing)} images …")
-    pipe = hf_pipeline(
-        task="depth-estimation",
-        model=_DEPTH_MODEL_ID,
-        device=0,  # first GPU; falls back to CPU if unavailable
-    )
+    lock_dir = Path(cache_root) / "depth" / scene.dataset / scene.name
+    lock_dir.mkdir(parents=True, exist_ok=True)
+    with open(lock_dir / ".lock", "w") as lock_f:
+        fcntl.flock(lock_f, fcntl.LOCK_EX)
+        try:
+            still_missing: list[int] = []
+            for iid in missing:
+                cam = scene.get_camera(iid)
+                path = _cache_path(cam, scene, cache_root)
+                if path.exists():
+                    results[iid] = np.load(str(path))
+                else:
+                    still_missing.append(iid)
+            if not still_missing:
+                return results
 
-    for iid in missing:
-        cam = scene.get_camera(iid)
-        img_pil = PILImage.fromarray(cam.load_image())
-        result = pipe(img_pil)
+            try:
+                from PIL import Image as PILImage
+                from transformers import pipeline as hf_pipeline
+            except ImportError:
+                raise ImportError(
+                    "Depth Anything V2 requires: pip install splataudit[priors]\n"
+                    "(installs transformers >= 4.44)"
+                ) from None
 
-        # raw model output (relative disparity); "depth" is an 8-bit visualisation
-        disp = result["predicted_depth"].squeeze().detach().cpu().numpy().astype(np.float32)
-        if disp.shape != (cam.height, cam.width):
-            import cv2
+            print(
+                f"[priors] Loading {_DEPTH_MODEL_ID} for {len(still_missing)} images …",
+                flush=True,
+            )
+            pipe = hf_pipeline(
+                task="depth-estimation",
+                model=_DEPTH_MODEL_ID,
+                device=0,  # first visible GPU; falls back to CPU if unavailable
+            )
 
-            disp = cv2.resize(disp, (cam.width, cam.height), interpolation=cv2.INTER_LINEAR)
-        depth = disp
+            for iid in still_missing:
+                cam = scene.get_camera(iid)
+                img_pil = PILImage.fromarray(cam.load_image())
+                result = pipe(img_pil)
 
-        path = _cache_path(cam, scene, cache_root)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        np.save(str(path), depth)
+                # raw model output (relative disparity); "depth" is an 8-bit visualisation
+                disp = result["predicted_depth"].squeeze().detach().cpu().numpy().astype(np.float32)
+                if disp.shape != (cam.height, cam.width):
+                    import cv2
 
-        results[iid] = depth
+                    disp = cv2.resize(disp, (cam.width, cam.height), interpolation=cv2.INTER_LINEAR)
+                depth = disp
+
+                path = _cache_path(cam, scene, cache_root)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                tmp = path.with_name(f".tmp_{os.getpid()}_{path.name}")
+                np.save(str(tmp), depth)
+                os.replace(tmp, path)
+
+                results[iid] = depth
+        finally:
+            fcntl.flock(lock_f, fcntl.LOCK_UN)
 
     return results
 

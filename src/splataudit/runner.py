@@ -1,9 +1,11 @@
 import itertools
 import json
+import os
 import time
 import traceback
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import yaml
 
@@ -11,9 +13,11 @@ from splataudit.data import DATASETS
 from splataudit.utils import (
     RUN_KEYS,
     append_rows,
+    claim_run,
     config_hash,
     finished_runs,
     git_commit,
+    notify,
     run_key,
     run_tag,
 )
@@ -159,23 +163,52 @@ def estimate_hours(cells, results_csv=None):
     return minutes / 60
 
 
-def sweep(cfg, max_runs=None):
-    """Run the sweep grid, skipping cells that already have rows, returns the new row count."""
-    done = finished_runs(Path(cfg["output_dir"]) / "results.csv")
-    cells = [c for c in plan_sweep(cfg) if run_key(c) not in done]
-    if max_runs:
-        cells = cells[:max_runs]
+def sweep(cfg, max_runs=None, shard=None):
+    """Run the sweep grid, skipping cells that already have rows or are claimed by another worker."""
+    out_dir = Path(cfg["output_dir"])
+    results_csv = out_dir / "results.csv"
+    all_cells = plan_sweep(cfg)
+    if shard is not None:
+        idx, total = shard
+        all_cells = all_cells[idx::total]
+
+    done = finished_runs(results_csv)
+    cells = [c for c in all_cells if run_key(c) not in done]
+
+    worker = os.environ.get("SPLATAUDIT_WORKER")
+    prefix = f"[gpu={worker}] " if worker is not None else ""
 
     n_rows = 0
+    ran = 0
     for i, cell in enumerate(cells, 1):
-        rows = run_cell(cell)
-        n_rows += len(rows)
-        status = rows[0]["status"]
-        print(
-            f"[{i}/{len(cells)}] [{status}] {run_tag(cell)}"
-            + (f" {rows[0].get('error')}" if status != "ok" else "")
-        )
+        if max_runs and ran >= max_runs:
+            break
+        if run_key(cell) in finished_runs(results_csv):
+            continue
+        cell_cfg = with_defaults(cell)
+        run_dir = out_dir / "runs" / run_tag(cell_cfg)
+        with claim_run(run_dir) as claimed:
+            if not claimed or run_key(cell) in finished_runs(results_csv):
+                continue
+            print(f"{prefix}[{i}/{len(cells)}] [start] {run_tag(cell_cfg)}", flush=True)
+            rows = run_cell(cell)
+            ran += 1
+            n_rows += len(rows)
+            status = rows[0]["status"]
+            detail = f" {rows[0].get('error')}" if status != "ok" else _format_ok_summary(rows)
+            msg = f"{prefix}[{i}/{len(cells)}] [{status}] {run_tag(cell_cfg)}{detail}"
+            print(msg, flush=True)
+            notify(msg)
     return n_rows
+
+
+def _format_ok_summary(rows):
+    """Short metric summary for a finished cell (mean test PSNR, Gaussian count, seconds)."""
+    test_psnr = [float(r["psnr"]) for r in rows if str(r.get("in_test")) == "True" and "psnr" in r]
+    psnr_str = f" psnr={np.mean(test_psnr):.2f}dB" if test_psnr else ""
+    t_str = f" {rows[0].get('train_time_s', '?')}s"
+    g_str = f" n={rows[0].get('n_gaussians', '?')}"
+    return f"{psnr_str}{g_str}{t_str}"
 
 
 def report(df, metrics=("psnr", "ssim", "lpips_vgg")):

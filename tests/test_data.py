@@ -1,4 +1,5 @@
 """Loader, init and bookkeeping checks."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -28,7 +29,7 @@ def test_poses_match_poses_bounds(dataset, name):
     sc = load_scene(DATA, dataset, name)
     pb = np.load(DATA / dataset / name / "poses_bounds.npy")[:, :15].reshape(-1, 3, 5)
     np.testing.assert_allclose(pb[:, :, 3], sc.centers, atol=1e-6)
-    for p, cam in zip(pb, sc.cameras):
+    for p, cam in zip(pb, sc.cameras, strict=True):
         c2w_cv = np.stack([p[:, 1], p[:, 0], -p[:, 2]], axis=1)
         np.testing.assert_allclose(c2w_cv, cam.R.T, atol=1e-6)
     cam = sc.cameras[0]
@@ -70,10 +71,16 @@ def test_random_init_inside_training_frusta():
         pc = xyz @ cam.R.T + cam.t
         u = cam.fx * pc[:, 0] / pc[:, 2] + cam.cx
         v = cam.fy * pc[:, 1] / pc[:, 2] + cam.cy
-        in_some |= ((pc[:, 2] >= near * 0.999) & (pc[:, 2] <= far * 1.001)
-                    & (u >= -1e-3) & (u <= cam.width + 1e-3) & (v >= -1e-3) & (v <= cam.height + 1e-3))
+        in_some |= (
+            (pc[:, 2] >= near * 0.999)
+            & (pc[:, 2] <= far * 1.001)
+            & (u >= -1e-3)
+            & (u <= cam.width + 1e-3)
+            & (v >= -1e-3)
+            & (v <= cam.height + 1e-3)
+        )
     assert in_some.all()
-    dense, _ = random_init(sc, train, seed=0, n_points=100_000)    # the default count
+    dense, _ = random_init(sc, train, seed=0, n_points=100_000)  # the default count
     assert init_quality(sc, train, dense)["coverage"] > 0.95
     np.testing.assert_array_equal(xyz, random_init(sc, train, seed=0, n_points=5000)[0])
     assert not np.array_equal(xyz, random_init(sc, train, seed=1, n_points=5000)[0])
@@ -81,21 +88,60 @@ def test_random_init_inside_training_frusta():
 
 def test_camera_sampler_is_seeded_and_covers_every_view():
     a = [CameraSampler(list("abc"), seed=3).next() for _ in range(1)]
-    s1, s2, s3 = CameraSampler(list("abc"), 3), CameraSampler(list("abc"), 3), CameraSampler(list("abc"), 4)
+    s1, s2, s3 = (
+        CameraSampler(list("abc"), 3),
+        CameraSampler(list("abc"), 3),
+        CameraSampler(list("abc"), 4),
+    )
     seq1 = [s1.next() for _ in range(30)]
     assert seq1 == [s2.next() for _ in range(30)]
     assert seq1 != [s3.next() for _ in range(30)]
     for epoch in range(10):
-        assert sorted(seq1[3 * epoch:3 * epoch + 3]) == ["a", "b", "c"]
+        assert sorted(seq1[3 * epoch : 3 * epoch + 3]) == ["a", "b", "c"]
     assert a[0] in "abc"
 
 
 def test_results_resume(tmp_path):
     csv = tmp_path / "results.csv"
-    base = {"dataset": "llff", "scene": "fern", "n_views": 3, "protocol": "p0", "k": None,
-            "init": "random", "method": "vanilla", "seed": 0}
+    base = {
+        "dataset": "llff",
+        "scene": "fern",
+        "n_views": 3,
+        "protocol": "p0",
+        "k": None,
+        "init": "random",
+        "method": "vanilla",
+        "seed": 0,
+    }
     append_rows(csv, [base | {"test_image": "a", "psnr": 20.0, "status": "ok"}])
     append_rows(csv, [base | {"method": "fsgs", "status": "not_implemented", "error": "x"}])
     done = finished_runs(csv)
     assert len(done) == 1
     assert ("llff", "fern", "3", "p0", "", "random", "vanilla", "0") in done
+
+
+def test_claim_run_blocks_concurrent_claim(tmp_path):
+    from splataudit.utils import claim_run
+
+    run_dir = tmp_path / "cell"
+    with claim_run(run_dir) as first:
+        assert first is True
+        with claim_run(run_dir) as second:
+            assert second is False
+    with claim_run(run_dir) as third:
+        assert third is True
+
+
+def test_cli_shard_and_gpus_helpers():
+    from splataudit.cli import _parse_shard, _strip_gpus_arg
+
+    assert _parse_shard(None) is None
+    assert _parse_shard("0/2") == (0, 2)
+    assert _parse_shard("1/2") == (1, 2)
+    with pytest.raises(ValueError):
+        _parse_shard("2/2")
+    assert _strip_gpus_arg(["sweep", "--gpus", "0", "1", "--datasets", "llff"]) == [
+        "sweep",
+        "--datasets",
+        "llff",
+    ]

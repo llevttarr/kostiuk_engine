@@ -1,9 +1,12 @@
 import csv
+import fcntl
 import hashlib
 import json
 import os
 import random
 import subprocess
+import urllib.request
+from contextlib import contextmanager
 from pathlib import Path
 
 import numpy as np
@@ -79,16 +82,22 @@ def run_tag(cfg):
 
 
 def append_rows(path, rows):
-    """Append result rows to the csv, written right away so a crash loses nothing."""
+    """Append result rows to the csv with an exclusive file lock so multi-GPU workers never race."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    new = not path.exists()
     with open(path, "a", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=FIELDS)
-        if new:
-            w.writeheader()
-        for row in rows:
-            w.writerow({k: row.get(k, "") for k in FIELDS})
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            f.seek(0, os.SEEK_END)
+            new = f.tell() == 0
+            w = csv.DictWriter(f, fieldnames=FIELDS)
+            if new:
+                w.writeheader()
+            for row in rows:
+                w.writerow({k: row.get(k, "") for k in FIELDS})
+            f.flush()
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
 
 
 def finished_runs(path):
@@ -96,7 +105,53 @@ def finished_runs(path):
     if not Path(path).exists():
         return set()
     with open(path, newline="") as f:
-        return {tuple(r[k] for k in RUN_KEYS) for r in csv.DictReader(f) if r["status"] == "ok"}
+        fcntl.flock(f, fcntl.LOCK_SH)
+        try:
+            return {
+                tuple(r[k] for k in RUN_KEYS) for r in csv.DictReader(f) if r.get("status") == "ok"
+            }
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+
+@contextmanager
+def claim_run(run_dir):
+    """Non-blocking OS lock on a run directory so parallel GPU workers skip cells in progress."""
+    run_dir = Path(run_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    lock_file = open(run_dir / ".lock", "w")
+    try:
+        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        claimed = True
+    except BlockingIOError:
+        claimed = False
+    try:
+        yield claimed
+    finally:
+        if claimed:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
+        lock_file.close()
+
+
+def notify(message, target=None):
+    """Send a best-effort live status message to ntfy.sh or a Discord/Slack webhook."""
+    target = target or os.environ.get("SPLATAUDIT_NOTIFY")
+    if not target:
+        return
+    url = target if target.startswith(("http://", "https://")) else f"https://ntfy.sh/{target}"
+    try:
+        if "discord.com/api/webhooks" in url or "hooks.slack.com" in url:
+            data = json.dumps({"content": message, "text": message}).encode()
+            req = urllib.request.Request(
+                url, data=data, headers={"Content-Type": "application/json"}
+            )
+        else:
+            req = urllib.request.Request(
+                url, data=message.encode(), headers={"Title": "splataudit"}
+            )
+        urllib.request.urlopen(req, timeout=5).close()
+    except Exception:
+        pass
 
 
 def config_hash(cfg):

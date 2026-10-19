@@ -32,11 +32,13 @@ python scripts/get_mip360.py get
 # splits: generated once and committed (splits/)
 PYTHONPATH=src python -m splataudit make-splits
 # inits: cached in cache/ (git-ignored), one per (scene, split), shared by every method
-PYTHONPATH=src python -m splataudit make-inits --init random sparse_sfm foundation --protocol p0
+PYTHONPATH=src python -m splataudit make-inits --init random sparse_sfm foundation --protocol p0 p2
 
 # the grid: 372 runs, resumable
 PYTHONPATH=src python -m splataudit sweep --dry-run
 PYTHONPATH=src python -m splataudit sweep
+# parallel across 2 GPUs with live push notifications via ntfy.sh:
+PYTHONPATH=src python -m splataudit sweep --gpus 0 1 --notify kostiuk_splataudit
 PYTHONPATH=src python -m splataudit report --results results/results.csv
 
 # tests (164, all cpu)

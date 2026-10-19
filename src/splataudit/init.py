@@ -40,6 +40,8 @@ def init_path(cache, dataset, scene, split_stem, init, seed):
 
 def build_init(name, scene, train_ids, split_stem, seed, cache, overwrite=False):
     """Compute (or reuse) an init, returns its stats dict."""
+    import fcntl
+
     ply = init_path(cache, scene.dataset, scene.name, split_stem, name, seed)
     meta = ply.with_suffix(".json")
     if meta.exists() and ply.exists() and not overwrite:
@@ -47,29 +49,41 @@ def build_init(name, scene, train_ids, split_stem, seed, cache, overwrite=False)
         if cached["status"] == "ok":
             return cached
 
-    stats = {
-        "dataset": scene.dataset,
-        "scene": scene.name,
-        "split": split_stem,
-        "init": name,
-        "seed": seed if name in SEEDED_INITS else None,
-        "train": scene.names(train_ids),
-    }
-    if name in ("sparse_sfm", "dense_mvs"):
-        stats["sfm_settings"] = sfm_settings(scene.dataset)
-    t0 = time.time()
-    try:
-        xyz, rgb = compute_init(name, scene, train_ids, seed)
-        write_ply(ply, xyz, rgb)
-        stats.update(status="ok", **init_quality(scene, train_ids, xyz))
-    except NotImplementedError as e:
-        stats.update(status="not_implemented", error=str(e))
-    except Exception as e:
-        stats.update(status="failed", error=f"{type(e).__name__}: {e}")
-    stats["seconds"] = round(time.time() - t0, 2)
-    meta.parent.mkdir(parents=True, exist_ok=True)
-    meta.write_text(json.dumps(stats, indent=1) + "\n")
-    return stats
+    ply.parent.mkdir(parents=True, exist_ok=True)
+    with open(ply.with_suffix(".lock"), "w") as lock_f:
+        fcntl.flock(lock_f, fcntl.LOCK_EX)
+        try:
+            if meta.exists() and ply.exists() and not overwrite:
+                cached = json.loads(meta.read_text())
+                if cached["status"] == "ok":
+                    return cached
+
+            stats = {
+                "dataset": scene.dataset,
+                "scene": scene.name,
+                "split": split_stem,
+                "init": name,
+                "seed": seed if name in SEEDED_INITS else None,
+                "train": scene.names(train_ids),
+            }
+            if name in ("sparse_sfm", "dense_mvs"):
+                stats["sfm_settings"] = sfm_settings(scene.dataset)
+            t0 = time.time()
+            try:
+                xyz, rgb = compute_init(name, scene, train_ids, seed)
+                write_ply(ply, xyz, rgb)
+                stats.update(status="ok", **init_quality(scene, train_ids, xyz))
+            except NotImplementedError as e:
+                stats.update(status="not_implemented", error=str(e))
+            except Exception as e:
+                stats.update(status="failed", error=f"{type(e).__name__}: {e}")
+            stats["seconds"] = round(time.time() - t0, 2)
+            tmp_meta = meta.with_name(f".tmp_{os.getpid()}_{meta.name}")
+            tmp_meta.write_text(json.dumps(stats, indent=1) + "\n")
+            os.replace(tmp_meta, meta)
+            return stats
+        finally:
+            fcntl.flock(lock_f, fcntl.LOCK_UN)
 
 
 def get_init(name, scene, train_ids, split_stem, seed, cache):
@@ -294,7 +308,9 @@ def write_ply(path, xyz, rgb):
         "property float x\nproperty float y\nproperty float z\n"
         "property uchar red\nproperty uchar green\nproperty uchar blue\nend_header\n"
     )
-    path.write_bytes(header.encode("ascii") + data.tobytes())
+    tmp = path.with_name(f".tmp_{os.getpid()}_{path.name}")
+    tmp.write_bytes(header.encode("ascii") + data.tobytes())
+    os.replace(tmp, path)
 
 
 def read_ply(path):

@@ -50,6 +50,9 @@ def main():
     p.add_argument("--seeds", nargs="+", type=int)
     p.add_argument("--protocols", nargs="+", choices=["p0", "p2"])
     p.add_argument("--max-runs", type=int, help="stop after this many new runs")
+    p.add_argument("--gpus", nargs="+", type=int, help="GPU ids to run in parallel (e.g. 0 1)")
+    p.add_argument("--shard", help="run slice i/N of the grid (e.g. 0/2)")
+    p.add_argument("--notify", help="ntfy.sh topic/URL or webhook URL for live progress")
     p.add_argument("--dry-run", action="store_true", help="print the grid and the estimate only")
 
     p = sub.add_parser("report", help="per-scene summary of a results csv")
@@ -109,6 +112,7 @@ def make_inits(args):
     from splataudit.init import SEEDED_INITS, build_init
     from splataudit.splits import load_split, resolve, split_path
 
+    failed = []
     for ds, name, n, jobs in scene_jobs(args):
         scene = load_scene(args.data_root, ds, name)
         for protocol, k in jobs:
@@ -122,10 +126,18 @@ def make_inits(args):
                         init, scene, train_ids, path.stem, seed, args.cache, args.overwrite
                     )
                     tag = f" seed={seed}" if seed is not None else ""
-                    print(
+                    line = (
                         f"{ds}/{name}/{path.stem} {init}{tag}: {s['status']}, "
                         f"{s.get('n_points', 0)} points, coverage {s.get('coverage', float('nan')):.3f}"
                     )
+                    if s["status"] != "ok":
+                        line += f" ({s.get('error', '')})"
+                        failed.append(line)
+                    print(line, flush=True)
+    if failed:
+        print(f"\nWARNING: {len(failed)} init(s) did not succeed:", flush=True)
+        for line in failed:
+            print("  ", line, flush=True)
 
 
 def run(args):
@@ -141,13 +153,47 @@ def run(args):
     print(f"done, {sum(r['status'] == 'ok' for r in rows)}/{len(rows)} views evaluated ok")
 
 
+def _parse_shard(spec):
+    if not spec:
+        return None
+    idx_s, total_s = spec.split("/")
+    idx, total = int(idx_s), int(total_s)
+    if not (0 <= idx < total):
+        raise ValueError(f"invalid --shard {spec!r}: expected 0 <= i < N")
+    return idx, total
+
+
+def _strip_gpus_arg(argv):
+    """Remove --gpus <id>... from argv when spawning single-GPU worker subprocesses."""
+    out = []
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--gpus":
+            i += 1
+            while i < len(argv) and not argv[i].startswith("-"):
+                i += 1
+        elif argv[i].startswith("--gpus="):
+            i += 1
+        else:
+            out.append(argv[i])
+            i += 1
+    return out
+
+
 def sweep(args):
+    import os
+    import subprocess
+    import sys
     from pathlib import Path
 
     from splataudit.runner import estimate_hours, load_config, plan_sweep
     from splataudit.runner import sweep as run_sweep
-    from splataudit.utils import finished_runs, run_key, run_tag
+    from splataudit.utils import finished_runs, notify, run_key, run_tag
 
+    if args.notify:
+        os.environ["SPLATAUDIT_NOTIFY"] = args.notify
+
+    shard = _parse_shard(args.shard)
     cfg = load_config(args.config)
     if args.output_dir:
         cfg["output_dir"] = args.output_dir
@@ -159,11 +205,17 @@ def sweep(args):
 
     results = Path(cfg["output_dir"]) / "results.csv"
     cells = plan_sweep(cfg)
+    if shard is not None:
+        cells = cells[shard[0] :: shard[1]]
     done = finished_runs(results)
     todo = [c for c in cells if run_key(c) not in done]
+
+    n_gpus = max(1, len(args.gpus or []))
+    est_h = estimate_hours(todo, results) / n_gpus
+    gpu_note = f" across {n_gpus} GPUs {args.gpus}" if args.gpus and len(args.gpus) > 1 else ""
     print(
-        f"{len(cells)} cells, {len(todo)} still to run, "
-        f"rough estimate {estimate_hours(todo, results):.1f} h"
+        f"{len(cells)} cells, {len(todo)} still to run, rough estimate {est_h:.1f} h{gpu_note}",
+        flush=True,
     )
     if args.dry_run:
         for c in todo[:20]:
@@ -171,7 +223,36 @@ def sweep(args):
         if len(todo) > 20:
             print(f"   ... and {len(todo) - 20} more")
         return
-    print(f"\nsweep done, {run_sweep(cfg, args.max_runs)} new rows in {results}")
+
+    if args.gpus and len(args.gpus) > 1:
+        notify(f"sweep starting: {len(todo)} cells on GPUs {args.gpus} (est {est_h:.1f}h)")
+        child_argv = _strip_gpus_arg(sys.argv[1:])
+        procs = [
+            subprocess.Popen(
+                [sys.executable, "-u", "-m", "splataudit", *child_argv],
+                env={
+                    **os.environ,
+                    "CUDA_VISIBLE_DEVICES": str(gpu),
+                    "SPLATAUDIT_WORKER": str(gpu),
+                    "PYTHONUNBUFFERED": "1",
+                },
+            )
+            for gpu in args.gpus
+        ]
+        codes = [p.wait() for p in procs]
+        if any(c != 0 for c in codes):
+            raise SystemExit(next(c for c in codes if c != 0))
+        done_after = len(finished_runs(results)) - len(done)
+        msg = f"sweep done on GPUs {args.gpus}: {done_after} newly completed runs in {results}"
+        print(f"\n{msg}", flush=True)
+        notify(msg)
+        return
+
+    if args.gpus and len(args.gpus) == 1:
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpus[0])
+
+    n_new = run_sweep(cfg, args.max_runs, shard=shard)
+    print(f"\nsweep done, {n_new} new rows in {results}", flush=True)
 
 
 def report(args):

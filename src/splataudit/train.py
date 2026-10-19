@@ -93,7 +93,16 @@ def train(
     sampler = CameraSampler([scene.get_camera(iid) for iid in train_ids], int(cfg["seed"]))
     ssim_fn = StructuralSimilarityIndexMeasure(data_range=1.0).to(device)
 
-    for step in trange(tc["iterations"], desc="Training", dynamic_ncols=True):
+    import os
+    import sys
+    import time
+
+    worker = os.environ.get("SPLATAUDIT_WORKER")
+    quiet_tqdm = bool(worker) or not sys.stderr.isatty()
+    log_every = max(1, tc["iterations"] // 4) if tc["iterations"] >= 1000 else 0
+    t_start = time.time()
+
+    for step in trange(tc["iterations"], desc="Training", dynamic_ncols=True, disable=quiet_tqdm):
         # SH degree increases every 1 000 steps up to the configured maximum
         sh_degree = min(tc["sh_degree"], step // 1000)
 
@@ -145,6 +154,16 @@ def train(
         strategy.step_post_backward(params, optimizers, strategy_state, step, info)
 
         method.post_step(dict(params), step)
+
+        if quiet_tqdm and log_every and (step + 1) % log_every == 0:
+            prefix = f"[gpu={worker}] " if worker is not None else ""
+            elapsed = time.time() - t_start
+            print(
+                f"  {prefix}step {step + 1}/{tc['iterations']} "
+                f"loss={float(loss.detach()):.4f} "
+                f"gaussians={params['means'].shape[0]} ({elapsed:.0f}s)",
+                flush=True,
+            )
 
     return {k: v.detach().cpu() for k, v in params.items()} | {
         "sh_degree": tc["sh_degree"],
