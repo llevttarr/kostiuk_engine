@@ -19,19 +19,27 @@ ruff check src/ --fix   # lint + autocorrect
 ## usage
 
 ```bash
-# data (writes to data/, run from the repo root)
+# data (writes to data/, run from the repo root), about 12 GB
+bash scripts/get_all.sh
+
+# or one dataset at a time
 bash scripts/get_llff.sh
-python scripts/get_dtu.py calib                 # cal18 cameras
-python scripts/get_dtu.py get --light 3         # 15 standard scans, lighting 3
-python scripts/get_dtu.py masks                 # RegNeRF eval masks
-python scripts/get_mip360.py get                # bicycle garden room counter
+python scripts/get_dtu.py calib
+python scripts/get_dtu.py get --light 3
+python scripts/get_dtu.py masks
+python scripts/get_mip360.py get
 
 # splits: generated once and committed (splits/)
 PYTHONPATH=src python -m splataudit make-splits
-# inits: cached in cache/ (git-ignored)
-PYTHONPATH=src python -m splataudit make-inits --init random sparse_sfm
+# inits: cached in cache/ (git-ignored), one per (scene, split), shared by every method
+PYTHONPATH=src python -m splataudit make-inits --init random sparse_sfm foundation --protocol p0
 
-# tests
+# the grid: 372 runs, resumable
+PYTHONPATH=src python -m splataudit sweep --dry-run
+PYTHONPATH=src python -m splataudit sweep
+PYTHONPATH=src python -m splataudit report --results results/results.csv
+
+# tests (164, all cpu)
 python -m pytest
 ```
 
@@ -41,10 +49,14 @@ python -m pytest
 |---|---|
 | `data.py` | `Camera`, `Scene`, loaders for LLFF, Mip-360 and DTU |
 | `splits.py` | P0 / P2 splits, angular distances (P1) |
-| `init.py` | random, sparse SfM, dense MVS and foundation inits, PLY I/O, init cache |
+| `init.py` | random, sparse SfM, dense MVS and VGGT inits, Sim(3) alignment, PLY I/O, init cache |
 | `utils.py` | seeding, camera sampler, results CSV |
-| `train.py`, `eval.py`, `methods.py`, `priors.py` | training loop, metrics, methods, depth priors |
+| `train.py`, `eval.py`, `priors.py` | training loop, metrics, depth priors |
+| `methods.py` | vanilla, FSGS, DNGaussian, DropGaussian (CrossViewGating still raises) |
 | `runner.py`, `cli.py` | one run / sweep / report, command line |
+
+The GPU machine has its own sequence in `GPU_SETUP.md`. The method axis, its constants and
+every deviation from the released code are in `BENCHMARK_PLAN.md` §6.
 
 ## Memory note
 

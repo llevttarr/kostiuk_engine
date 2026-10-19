@@ -1,0 +1,156 @@
+{
+ "version": 2,
+ "dataset": "llff",
+ "scene": "orchids",
+ "protocol": "p0",
+ "n_views": 3,
+ "k": null,
+ "ordering": "filename",
+ "train": [
+  "IMG_4468.JPG",
+  "IMG_4479.JPG",
+  "IMG_4490.JPG"
+ ],
+ "test": [
+  "IMG_4467.JPG",
+  "IMG_4475.JPG",
+  "IMG_4483.JPG",
+  "IMG_4491.JPG"
+ ],
+ "eval_all": [
+  "IMG_4467.JPG",
+  "IMG_4469.JPG",
+  "IMG_4470.JPG",
+  "IMG_4471.JPG",
+  "IMG_4472.JPG",
+  "IMG_4473.JPG",
+  "IMG_4474.JPG",
+  "IMG_4475.JPG",
+  "IMG_4476.JPG",
+  "IMG_4477.JPG",
+  "IMG_4478.JPG",
+  "IMG_4480.JPG",
+  "IMG_4481.JPG",
+  "IMG_4482.JPG",
+  "IMG_4483.JPG",
+  "IMG_4484.JPG",
+  "IMG_4485.JPG",
+  "IMG_4486.JPG",
+  "IMG_4487.JPG",
+  "IMG_4488.JPG",
+  "IMG_4489.JPG",
+  "IMG_4491.JPG"
+ ],
+ "distances": {
+  "IMG_4467.JPG": {
+   "centre_deg": 2.2708,
+   "optical_deg": 3.0887,
+   "nearest_train": "IMG_4468.JPG"
+  },
+  "IMG_4469.JPG": {
+   "centre_deg": 3.0706,
+   "optical_deg": 2.2207,
+   "nearest_train": "IMG_4468.JPG"
+  },
+  "IMG_4470.JPG": {
+   "centre_deg": 6.8286,
+   "optical_deg": 5.5215,
+   "nearest_train": "IMG_4468.JPG"
+  },
+  "IMG_4471.JPG": {
+   "centre_deg": 10.2387,
+   "optical_deg": 8.6403,
+   "nearest_train": "IMG_4479.JPG"
+  },
+  "IMG_4472.JPG": {
+   "centre_deg": 8.4125,
+   "optical_deg": 6.5395,
+   "nearest_train": "IMG_4479.JPG"
+  },
+  "IMG_4473.JPG": {
+   "centre_deg": 6.12,
+   "optical_deg": 4.9676,
+   "nearest_train": "IMG_4479.JPG"
+  },
+  "IMG_4474.JPG": {
+   "centre_deg": 3.6803,
+   "optical_deg": 3.3123,
+   "nearest_train": "IMG_4479.JPG"
+  },
+  "IMG_4475.JPG": {
+   "centre_deg": 2.7345,
+   "optical_deg": 2.9402,
+   "nearest_train": "IMG_4479.JPG"
+  },
+  "IMG_4476.JPG": {
+   "centre_deg": 4.613,
+   "optical_deg": 4.2485,
+   "nearest_train": "IMG_4468.JPG"
+  },
+  "IMG_4477.JPG": {
+   "centre_deg": 5.4367,
+   "optical_deg": 4.472,
+   "nearest_train": "IMG_4479.JPG"
+  },
+  "IMG_4478.JPG": {
+   "centre_deg": 3.6227,
+   "optical_deg": 3.1631,
+   "nearest_train": "IMG_4479.JPG"
+  },
+  "IMG_4480.JPG": {
+   "centre_deg": 3.2672,
+   "optical_deg": 3.815,
+   "nearest_train": "IMG_4479.JPG"
+  },
+  "IMG_4481.JPG": {
+   "centre_deg": 6.9166,
+   "optical_deg": 8.6053,
+   "nearest_train": "IMG_4479.JPG"
+  },
+  "IMG_4482.JPG": {
+   "centre_deg": 8.8487,
+   "optical_deg": 10.8026,
+   "nearest_train": "IMG_4490.JPG"
+  },
+  "IMG_4483.JPG": {
+   "centre_deg": 6.0349,
+   "optical_deg": 9.6769,
+   "nearest_train": "IMG_4490.JPG"
+  },
+  "IMG_4484.JPG": {
+   "centre_deg": 3.1915,
+   "optical_deg": 5.1447,
+   "nearest_train": "IMG_4490.JPG"
+  },
+  "IMG_4485.JPG": {
+   "centre_deg": 4.8781,
+   "optical_deg": 3.4305,
+   "nearest_train": "IMG_4479.JPG"
+  },
+  "IMG_4486.JPG": {
+   "centre_deg": 8.7991,
+   "optical_deg": 10.2888,
+   "nearest_train": "IMG_4479.JPG"
+  },
+  "IMG_4487.JPG": {
+   "centre_deg": 9.9314,
+   "optical_deg": 10.8659,
+   "nearest_train": "IMG_4490.JPG"
+  },
+  "IMG_4488.JPG": {
+   "centre_deg": 6.8641,
+   "optical_deg": 7.1266,
+   "nearest_train": "IMG_4490.JPG"
+  },
+  "IMG_4489.JPG": {
+   "centre_deg": 4.1811,
+   "optical_deg": 3.4122,
+   "nearest_train": "IMG_4490.JPG"
+  },
+  "IMG_4491.JPG": {
+   "centre_deg": 4.8521,
+   "optical_deg": 6.9945,
+   "nearest_train": "IMG_4490.JPG"
+  }
+ }
+}

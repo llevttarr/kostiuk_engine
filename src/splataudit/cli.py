@@ -30,7 +30,7 @@ def main():
     p.add_argument("--overwrite", action="store_true")
 
     p = sub.add_parser("run", help="run one experiment cell")
-    p.add_argument("--config", required=True)
+    p.add_argument("--config", default="config.yaml")
     p.add_argument("--dataset", choices=list(DATASETS))
     p.add_argument("--scene")
     p.add_argument("--init", choices=INITS)
@@ -41,8 +41,16 @@ def main():
     p.add_argument("--output-dir")
 
     p = sub.add_parser("sweep", help="run the init x method x protocol grid")
-    p.add_argument("--config", required=True)
+    p.add_argument("--config", default="config.yaml")
     p.add_argument("--output-dir")
+    p.add_argument("--datasets", nargs="+", choices=list(DATASETS))
+    p.add_argument("--scenes", nargs="+", help="only with a single dataset")
+    p.add_argument("--inits", nargs="+", choices=INITS)
+    p.add_argument("--methods", nargs="+", choices=METHODS)
+    p.add_argument("--seeds", nargs="+", type=int)
+    p.add_argument("--protocols", nargs="+", choices=["p0", "p2"])
+    p.add_argument("--max-runs", type=int, help="stop after this many new runs")
+    p.add_argument("--dry-run", action="store_true", help="print the grid and the estimate only")
 
     p = sub.add_parser("report", help="per-scene summary of a results csv")
     p.add_argument("--results", required=True)
@@ -134,13 +142,36 @@ def run(args):
 
 
 def sweep(args):
-    from splataudit.runner import load_config
+    from pathlib import Path
+
+    from splataudit.runner import estimate_hours, load_config, plan_sweep
     from splataudit.runner import sweep as run_sweep
+    from splataudit.utils import finished_runs, run_key, run_tag
 
     cfg = load_config(args.config)
     if args.output_dir:
         cfg["output_dir"] = args.output_dir
-    print(f"\nsweep done, {run_sweep(cfg)} new rows in {cfg['output_dir']}/results.csv")
+    if args.scenes:
+        cfg["scenes"] = args.scenes
+    for key in ("datasets", "inits", "methods", "seeds", "protocols"):
+        if getattr(args, key):
+            cfg["sweep"][key] = getattr(args, key)
+
+    results = Path(cfg["output_dir"]) / "results.csv"
+    cells = plan_sweep(cfg)
+    done = finished_runs(results)
+    todo = [c for c in cells if run_key(c) not in done]
+    print(
+        f"{len(cells)} cells, {len(todo)} still to run, "
+        f"rough estimate {estimate_hours(todo, results):.1f} h"
+    )
+    if args.dry_run:
+        for c in todo[:20]:
+            print("  ", run_tag(c))
+        if len(todo) > 20:
+            print(f"   ... and {len(todo) - 20} more")
+        return
+    print(f"\nsweep done, {run_sweep(cfg, args.max_runs)} new rows in {results}")
 
 
 def report(args):

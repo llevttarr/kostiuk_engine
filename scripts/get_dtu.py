@@ -10,14 +10,16 @@
 #  python scripts/get_dtu.py get ... --points - also the STL ground-truth clouds
 
 import io
+import shutil
 import sys
 import zipfile
-import requests
 from pathlib import Path
+
+import requests
 
 BASE = "https://roboimagedata2.compute.dtu.dk/data/MVS"
 OUT = Path("data/dtu")
-STANDARD = [8, 21, 30, 31, 34, 38, 40, 41, 45, 55, 63, 82, 103, 110, 114] # few-shot set
+STANDARD = [8, 21, 30, 31, 34, 38, 40, 41, 45, 55, 63, 82, 103, 110, 114]  # few-shot set
 # RegNeRF/DNGaussian evaluation masks ("backed up from RegNeRF", DNGaussian README)
 MASKS_GDRIVE = "https://drive.google.com/drive/folders/1OEmJcbP0XUVfG647mdYWxEy9yOw7L_Si"
 
@@ -29,10 +31,13 @@ class HttpFile(io.RawIOBase):
         h = requests.head(url, allow_redirects=True, timeout=30).headers
         self.size = int(h["Content-Length"])
         assert h.get("Accept-Ranges") == "bytes", "server has no range support"
+
     def seekable(self):
         return True
+
     def readable(self):
         return True
+
     def tell(self):
         return self.pos
 
@@ -49,15 +54,17 @@ class HttpFile(io.RawIOBase):
         r.raise_for_status()
         self.pos += len(r.content)
         return r.content
+
     def readinto(self, b):
         data = self.read(len(b))
-        b[:len(data)] = data
+        b[: len(data)] = data
         return len(data)
 
 
 def open_zip(name):
     f = io.BufferedReader(HttpFile(f"{BASE}/{name}"), buffer_size=1 << 20)
     return zipfile.ZipFile(f)
+
 
 def list_archives():
     for name in ("Rectified.zip", "Points.zip"):
@@ -79,6 +86,7 @@ def get(scans, light=None, points=False):
         if not n.endswith(".png") or not any(f"/{w}/" in n for w in want):
             return False
         return light is None or Path(n).stem.split("_")[2] == light
+
     def is_cloud(n):
         return any(f"stl{s:03d}_" in Path(n).name for s in scans)
 
@@ -87,7 +95,7 @@ def get(scans, light=None, points=False):
     for name, keep in archives:
         z = open_zip(name)
         sel = [n for n in z.namelist() if keep(n)]
-        gb = sum(z.getinfo(n).file_size for n in sel) / 2 ** 30
+        gb = sum(z.getinfo(n).file_size for n in sel) / 2**30
         print(f"{name}: {len(sel)} files, {gb:.2f} GB")
         if not sel:
             print("  nothing matched, run `list` and fix the filter")
@@ -111,10 +119,25 @@ def get_calib():
 
 
 def get_masks():
+    """Regnerf's eval masks, unpacked to data/dtu/idrmasks/<scan>/."""
     import gdown
-    out = OUT / "masks_download"
-    gdown.download_folder(MASKS_GDRIVE, output=str(out), quiet=False)
-    print(f"downloaded to {out}; unpack so that {OUT}/idrmasks/<scan>/... exists")
+
+    tmp = OUT / "masks_download"
+    if not list(tmp.glob("*.zip")):
+        gdown.download_folder(MASKS_GDRIVE, output=str(tmp), quiet=False)
+    n = 0
+    for archive in sorted(tmp.glob("*.zip")):
+        with zipfile.ZipFile(archive) as z:
+            for name in z.namelist():
+                if "/idrmasks/" not in name or name.endswith("/"):
+                    continue
+                dst = OUT / "idrmasks" / name.split("/idrmasks/", 1)[1]
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                dst.write_bytes(z.read(name))
+                n += 1
+    shutil.rmtree(tmp, ignore_errors=True)
+    scans = sorted(p.name for p in (OUT / "idrmasks").glob("scan*"))
+    print(f"{n} masks for {len(scans)} scans -> {OUT / 'idrmasks'}")
 
 
 if __name__ == "__main__":
@@ -122,7 +145,7 @@ if __name__ == "__main__":
     light = None
     if "--light" in args:
         i = args.index("--light")
-        light, args = args[i + 1], args[:i] + args[i + 2:]
+        light, args = args[i + 1], args[:i] + args[i + 2 :]
     points = "--points" in args
     args = [a for a in args if a != "--points"]
     if not args or args[0] == "list":

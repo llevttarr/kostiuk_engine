@@ -1,0 +1,252 @@
+{
+ "version": 2,
+ "dataset": "dtu",
+ "scene": "scan41",
+ "protocol": "p2",
+ "n_views": 3,
+ "k": 1,
+ "ordering": "azimuth-linear",
+ "train": [
+  "rect_013_3_r5000.png",
+  "rect_030_3_r5000.png",
+  "rect_049_3_r5000.png"
+ ],
+ "test": [
+  "rect_001_3_r5000.png",
+  "rect_002_3_r5000.png",
+  "rect_003_3_r5000.png",
+  "rect_009_3_r5000.png",
+  "rect_010_3_r5000.png",
+  "rect_011_3_r5000.png",
+  "rect_014_3_r5000.png",
+  "rect_015_3_r5000.png",
+  "rect_016_3_r5000.png",
+  "rect_023_3_r5000.png",
+  "rect_024_3_r5000.png",
+  "rect_025_3_r5000.png",
+  "rect_026_3_r5000.png",
+  "rect_027_3_r5000.png",
+  "rect_032_3_r5000.png",
+  "rect_033_3_r5000.png",
+  "rect_034_3_r5000.png",
+  "rect_035_3_r5000.png",
+  "rect_036_3_r5000.png",
+  "rect_041_3_r5000.png",
+  "rect_042_3_r5000.png",
+  "rect_043_3_r5000.png",
+  "rect_044_3_r5000.png",
+  "rect_045_3_r5000.png",
+  "rect_046_3_r5000.png"
+ ],
+ "eval_all": [
+  "rect_001_3_r5000.png",
+  "rect_002_3_r5000.png",
+  "rect_003_3_r5000.png",
+  "rect_009_3_r5000.png",
+  "rect_010_3_r5000.png",
+  "rect_011_3_r5000.png",
+  "rect_012_3_r5000.png",
+  "rect_014_3_r5000.png",
+  "rect_015_3_r5000.png",
+  "rect_016_3_r5000.png",
+  "rect_023_3_r5000.png",
+  "rect_024_3_r5000.png",
+  "rect_025_3_r5000.png",
+  "rect_026_3_r5000.png",
+  "rect_027_3_r5000.png",
+  "rect_028_3_r5000.png",
+  "rect_029_3_r5000.png",
+  "rect_031_3_r5000.png",
+  "rect_032_3_r5000.png",
+  "rect_033_3_r5000.png",
+  "rect_034_3_r5000.png",
+  "rect_035_3_r5000.png",
+  "rect_036_3_r5000.png",
+  "rect_041_3_r5000.png",
+  "rect_042_3_r5000.png",
+  "rect_043_3_r5000.png",
+  "rect_044_3_r5000.png",
+  "rect_045_3_r5000.png",
+  "rect_046_3_r5000.png",
+  "rect_047_3_r5000.png",
+  "rect_048_3_r5000.png"
+ ],
+ "distances": {
+  "rect_001_3_r5000.png": {
+   "centre_deg": 22.7356,
+   "optical_deg": 22.685,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_002_3_r5000.png": {
+   "centre_deg": 25.0915,
+   "optical_deg": 25.0579,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_003_3_r5000.png": {
+   "centre_deg": 35.4826,
+   "optical_deg": 35.4954,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_009_3_r5000.png": {
+   "centre_deg": 31.5403,
+   "optical_deg": 31.6421,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_010_3_r5000.png": {
+   "centre_deg": 19.9502,
+   "optical_deg": 20.0008,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_011_3_r5000.png": {
+   "centre_deg": 11.69,
+   "optical_deg": 11.7138,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_012_3_r5000.png": {
+   "centre_deg": 11.6762,
+   "optical_deg": 11.6535,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_014_3_r5000.png": {
+   "centre_deg": 11.6688,
+   "optical_deg": 11.6936,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_015_3_r5000.png": {
+   "centre_deg": 23.209,
+   "optical_deg": 23.2644,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_016_3_r5000.png": {
+   "centre_deg": 34.6249,
+   "optical_deg": 34.631,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_023_3_r5000.png": {
+   "centre_deg": 49.2856,
+   "optical_deg": 49.3296,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_024_3_r5000.png": {
+   "centre_deg": 39.3932,
+   "optical_deg": 39.4577,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_025_3_r5000.png": {
+   "centre_deg": 29.4496,
+   "optical_deg": 29.5064,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_026_3_r5000.png": {
+   "centre_deg": 20.0267,
+   "optical_deg": 19.99,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_027_3_r5000.png": {
+   "centre_deg": 12.6963,
+   "optical_deg": 12.6584,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_028_3_r5000.png": {
+   "centre_deg": 11.4099,
+   "optical_deg": 11.4073,
+   "nearest_train": "rect_030_3_r5000.png"
+  },
+  "rect_029_3_r5000.png": {
+   "centre_deg": 11.5494,
+   "optical_deg": 11.4933,
+   "nearest_train": "rect_030_3_r5000.png"
+  },
+  "rect_031_3_r5000.png": {
+   "centre_deg": 11.5343,
+   "optical_deg": 11.5209,
+   "nearest_train": "rect_030_3_r5000.png"
+  },
+  "rect_032_3_r5000.png": {
+   "centre_deg": 23.0584,
+   "optical_deg": 23.0373,
+   "nearest_train": "rect_030_3_r5000.png"
+  },
+  "rect_033_3_r5000.png": {
+   "centre_deg": 34.5023,
+   "optical_deg": 34.4693,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_034_3_r5000.png": {
+   "centre_deg": 42.6916,
+   "optical_deg": 42.6617,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_035_3_r5000.png": {
+   "centre_deg": 51.3906,
+   "optical_deg": 51.3739,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_036_3_r5000.png": {
+   "centre_deg": 60.3157,
+   "optical_deg": 60.3174,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_041_3_r5000.png": {
+   "centre_deg": 75.2625,
+   "optical_deg": 75.3536,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_042_3_r5000.png": {
+   "centre_deg": 66.8147,
+   "optical_deg": 66.9243,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_043_3_r5000.png": {
+   "centre_deg": 58.6169,
+   "optical_deg": 58.6696,
+   "nearest_train": "rect_013_3_r5000.png"
+  },
+  "rect_044_3_r5000.png": {
+   "centre_deg": 48.745,
+   "optical_deg": 48.8038,
+   "nearest_train": "rect_030_3_r5000.png"
+  },
+  "rect_045_3_r5000.png": {
+   "centre_deg": 37.9838,
+   "optical_deg": 38.0646,
+   "nearest_train": "rect_030_3_r5000.png"
+  },
+  "rect_046_3_r5000.png": {
+   "centre_deg": 27.5257,
+   "optical_deg": 27.6185,
+   "nearest_train": "rect_030_3_r5000.png"
+  },
+  "rect_047_3_r5000.png": {
+   "centre_deg": 17.9201,
+   "optical_deg": 17.9548,
+   "nearest_train": "rect_030_3_r5000.png"
+  },
+  "rect_048_3_r5000.png": {
+   "centre_deg": 11.478,
+   "optical_deg": 11.441,
+   "nearest_train": "rect_049_3_r5000.png"
+  }
+ },
+ "gap": 0,
+ "shared_with_p0": [
+  "rect_002_3_r5000.png",
+  "rect_003_3_r5000.png",
+  "rect_010_3_r5000.png",
+  "rect_011_3_r5000.png",
+  "rect_015_3_r5000.png",
+  "rect_016_3_r5000.png",
+  "rect_024_3_r5000.png",
+  "rect_025_3_r5000.png",
+  "rect_027_3_r5000.png",
+  "rect_032_3_r5000.png",
+  "rect_033_3_r5000.png",
+  "rect_034_3_r5000.png",
+  "rect_035_3_r5000.png",
+  "rect_036_3_r5000.png",
+  "rect_042_3_r5000.png",
+  "rect_043_3_r5000.png",
+  "rect_044_3_r5000.png",
+  "rect_046_3_r5000.png"
+ ]
+}

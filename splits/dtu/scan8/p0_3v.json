@@ -1,0 +1,195 @@
+{
+ "version": 2,
+ "dataset": "dtu",
+ "scene": "scan8",
+ "protocol": "p0",
+ "n_views": 3,
+ "k": null,
+ "ordering": "filename",
+ "train": [
+  "rect_023_3_r5000.png",
+  "rect_026_3_r5000.png",
+  "rect_029_3_r5000.png"
+ ],
+ "test": [
+  "rect_002_3_r5000.png",
+  "rect_003_3_r5000.png",
+  "rect_010_3_r5000.png",
+  "rect_011_3_r5000.png",
+  "rect_012_3_r5000.png",
+  "rect_013_3_r5000.png",
+  "rect_015_3_r5000.png",
+  "rect_016_3_r5000.png",
+  "rect_024_3_r5000.png",
+  "rect_025_3_r5000.png",
+  "rect_027_3_r5000.png",
+  "rect_028_3_r5000.png",
+  "rect_030_3_r5000.png",
+  "rect_031_3_r5000.png",
+  "rect_032_3_r5000.png",
+  "rect_033_3_r5000.png",
+  "rect_034_3_r5000.png",
+  "rect_035_3_r5000.png",
+  "rect_036_3_r5000.png",
+  "rect_042_3_r5000.png",
+  "rect_043_3_r5000.png",
+  "rect_044_3_r5000.png",
+  "rect_046_3_r5000.png",
+  "rect_047_3_r5000.png",
+  "rect_048_3_r5000.png"
+ ],
+ "eval_all": [
+  "rect_002_3_r5000.png",
+  "rect_003_3_r5000.png",
+  "rect_010_3_r5000.png",
+  "rect_011_3_r5000.png",
+  "rect_012_3_r5000.png",
+  "rect_013_3_r5000.png",
+  "rect_015_3_r5000.png",
+  "rect_016_3_r5000.png",
+  "rect_024_3_r5000.png",
+  "rect_025_3_r5000.png",
+  "rect_027_3_r5000.png",
+  "rect_028_3_r5000.png",
+  "rect_030_3_r5000.png",
+  "rect_031_3_r5000.png",
+  "rect_032_3_r5000.png",
+  "rect_033_3_r5000.png",
+  "rect_034_3_r5000.png",
+  "rect_035_3_r5000.png",
+  "rect_036_3_r5000.png",
+  "rect_042_3_r5000.png",
+  "rect_043_3_r5000.png",
+  "rect_044_3_r5000.png",
+  "rect_046_3_r5000.png",
+  "rect_047_3_r5000.png",
+  "rect_048_3_r5000.png"
+ ],
+ "distances": {
+  "rect_002_3_r5000.png": {
+   "centre_deg": 33.4969,
+   "optical_deg": 33.3944,
+   "nearest_train": "rect_026_3_r5000.png"
+  },
+  "rect_003_3_r5000.png": {
+   "centre_deg": 34.1576,
+   "optical_deg": 34.1109,
+   "nearest_train": "rect_023_3_r5000.png"
+  },
+  "rect_010_3_r5000.png": {
+   "centre_deg": 22.6728,
+   "optical_deg": 22.6342,
+   "nearest_train": "rect_026_3_r5000.png"
+  },
+  "rect_011_3_r5000.png": {
+   "centre_deg": 25.1927,
+   "optical_deg": 25.1359,
+   "nearest_train": "rect_026_3_r5000.png"
+  },
+  "rect_012_3_r5000.png": {
+   "centre_deg": 22.7989,
+   "optical_deg": 22.727,
+   "nearest_train": "rect_029_3_r5000.png"
+  },
+  "rect_013_3_r5000.png": {
+   "centre_deg": 20.0267,
+   "optical_deg": 19.99,
+   "nearest_train": "rect_026_3_r5000.png"
+  },
+  "rect_015_3_r5000.png": {
+   "centre_deg": 14.2069,
+   "optical_deg": 14.1975,
+   "nearest_train": "rect_026_3_r5000.png"
+  },
+  "rect_016_3_r5000.png": {
+   "centre_deg": 15.642,
+   "optical_deg": 15.6674,
+   "nearest_train": "rect_023_3_r5000.png"
+  },
+  "rect_024_3_r5000.png": {
+   "centre_deg": 11.6124,
+   "optical_deg": 11.5687,
+   "nearest_train": "rect_023_3_r5000.png"
+  },
+  "rect_025_3_r5000.png": {
+   "centre_deg": 11.5722,
+   "optical_deg": 11.6603,
+   "nearest_train": "rect_026_3_r5000.png"
+  },
+  "rect_027_3_r5000.png": {
+   "centre_deg": 11.5732,
+   "optical_deg": 11.5511,
+   "nearest_train": "rect_026_3_r5000.png"
+  },
+  "rect_028_3_r5000.png": {
+   "centre_deg": 15.6108,
+   "optical_deg": 15.5927,
+   "nearest_train": "rect_029_3_r5000.png"
+  },
+  "rect_030_3_r5000.png": {
+   "centre_deg": 11.5494,
+   "optical_deg": 11.4933,
+   "nearest_train": "rect_029_3_r5000.png"
+  },
+  "rect_031_3_r5000.png": {
+   "centre_deg": 17.2751,
+   "optical_deg": 17.2926,
+   "nearest_train": "rect_026_3_r5000.png"
+  },
+  "rect_032_3_r5000.png": {
+   "centre_deg": 11.5749,
+   "optical_deg": 11.5881,
+   "nearest_train": "rect_026_3_r5000.png"
+  },
+  "rect_033_3_r5000.png": {
+   "centre_deg": 14.5819,
+   "optical_deg": 14.591,
+   "nearest_train": "rect_026_3_r5000.png"
+  },
+  "rect_034_3_r5000.png": {
+   "centre_deg": 20.1804,
+   "optical_deg": 20.2411,
+   "nearest_train": "rect_023_3_r5000.png"
+  },
+  "rect_035_3_r5000.png": {
+   "centre_deg": 12.733,
+   "optical_deg": 12.7748,
+   "nearest_train": "rect_023_3_r5000.png"
+  },
+  "rect_036_3_r5000.png": {
+   "centre_deg": 12.592,
+   "optical_deg": 12.5862,
+   "nearest_train": "rect_023_3_r5000.png"
+  },
+  "rect_042_3_r5000.png": {
+   "centre_deg": 23.2192,
+   "optical_deg": 23.2963,
+   "nearest_train": "rect_023_3_r5000.png"
+  },
+  "rect_043_3_r5000.png": {
+   "centre_deg": 23.7561,
+   "optical_deg": 23.8401,
+   "nearest_train": "rect_023_3_r5000.png"
+  },
+  "rect_044_3_r5000.png": {
+   "centre_deg": 28.6383,
+   "optical_deg": 28.6979,
+   "nearest_train": "rect_023_3_r5000.png"
+  },
+  "rect_046_3_r5000.png": {
+   "centre_deg": 22.8423,
+   "optical_deg": 22.9046,
+   "nearest_train": "rect_026_3_r5000.png"
+  },
+  "rect_047_3_r5000.png": {
+   "centre_deg": 25.5996,
+   "optical_deg": 25.6314,
+   "nearest_train": "rect_026_3_r5000.png"
+  },
+  "rect_048_3_r5000.png": {
+   "centre_deg": 18.4283,
+   "optical_deg": 18.4597,
+   "nearest_train": "rect_029_3_r5000.png"
+  }
+ }
+}

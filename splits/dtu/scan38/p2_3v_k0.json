@@ -1,0 +1,252 @@
+{
+ "version": 2,
+ "dataset": "dtu",
+ "scene": "scan38",
+ "protocol": "p2",
+ "n_views": 3,
+ "k": 0,
+ "ordering": "azimuth-linear",
+ "train": [
+  "rect_041_3_r5000.png",
+  "rect_043_3_r5000.png",
+  "rect_044_3_r5000.png"
+ ],
+ "test": [
+  "rect_001_3_r5000.png",
+  "rect_002_3_r5000.png",
+  "rect_003_3_r5000.png",
+  "rect_009_3_r5000.png",
+  "rect_010_3_r5000.png",
+  "rect_011_3_r5000.png",
+  "rect_012_3_r5000.png",
+  "rect_013_3_r5000.png",
+  "rect_014_3_r5000.png",
+  "rect_015_3_r5000.png",
+  "rect_025_3_r5000.png",
+  "rect_026_3_r5000.png",
+  "rect_027_3_r5000.png",
+  "rect_028_3_r5000.png",
+  "rect_029_3_r5000.png",
+  "rect_030_3_r5000.png",
+  "rect_031_3_r5000.png",
+  "rect_032_3_r5000.png",
+  "rect_033_3_r5000.png",
+  "rect_034_3_r5000.png",
+  "rect_045_3_r5000.png",
+  "rect_046_3_r5000.png",
+  "rect_047_3_r5000.png",
+  "rect_048_3_r5000.png",
+  "rect_049_3_r5000.png"
+ ],
+ "eval_all": [
+  "rect_001_3_r5000.png",
+  "rect_002_3_r5000.png",
+  "rect_003_3_r5000.png",
+  "rect_009_3_r5000.png",
+  "rect_010_3_r5000.png",
+  "rect_011_3_r5000.png",
+  "rect_012_3_r5000.png",
+  "rect_013_3_r5000.png",
+  "rect_014_3_r5000.png",
+  "rect_015_3_r5000.png",
+  "rect_016_3_r5000.png",
+  "rect_023_3_r5000.png",
+  "rect_024_3_r5000.png",
+  "rect_025_3_r5000.png",
+  "rect_026_3_r5000.png",
+  "rect_027_3_r5000.png",
+  "rect_028_3_r5000.png",
+  "rect_029_3_r5000.png",
+  "rect_030_3_r5000.png",
+  "rect_031_3_r5000.png",
+  "rect_032_3_r5000.png",
+  "rect_033_3_r5000.png",
+  "rect_034_3_r5000.png",
+  "rect_035_3_r5000.png",
+  "rect_036_3_r5000.png",
+  "rect_042_3_r5000.png",
+  "rect_045_3_r5000.png",
+  "rect_046_3_r5000.png",
+  "rect_047_3_r5000.png",
+  "rect_048_3_r5000.png",
+  "rect_049_3_r5000.png"
+ ],
+ "distances": {
+  "rect_001_3_r5000.png": {
+   "centre_deg": 66.6599,
+   "optical_deg": 66.7116,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_002_3_r5000.png": {
+   "centre_deg": 58.4726,
+   "optical_deg": 58.4763,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_003_3_r5000.png": {
+   "centre_deg": 56.3868,
+   "optical_deg": 56.4072,
+   "nearest_train": "rect_043_3_r5000.png"
+  },
+  "rect_009_3_r5000.png": {
+   "centre_deg": 45.3094,
+   "optical_deg": 45.3746,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_010_3_r5000.png": {
+   "centre_deg": 47.5498,
+   "optical_deg": 47.5844,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_011_3_r5000.png": {
+   "centre_deg": 54.6464,
+   "optical_deg": 54.6829,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_012_3_r5000.png": {
+   "centre_deg": 61.7104,
+   "optical_deg": 61.7401,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_013_3_r5000.png": {
+   "centre_deg": 50.9003,
+   "optical_deg": 50.9493,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_014_3_r5000.png": {
+   "centre_deg": 41.6787,
+   "optical_deg": 41.7139,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_015_3_r5000.png": {
+   "centre_deg": 35.5279,
+   "optical_deg": 35.556,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_016_3_r5000.png": {
+   "centre_deg": 34.287,
+   "optical_deg": 34.3227,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_023_3_r5000.png": {
+   "centre_deg": 23.7561,
+   "optical_deg": 23.8401,
+   "nearest_train": "rect_043_3_r5000.png"
+  },
+  "rect_024_3_r5000.png": {
+   "centre_deg": 23.2289,
+   "optical_deg": 23.3199,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_025_3_r5000.png": {
+   "centre_deg": 24.2394,
+   "optical_deg": 24.293,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_026_3_r5000.png": {
+   "centre_deg": 30.887,
+   "optical_deg": 30.9749,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_027_3_r5000.png": {
+   "centre_deg": 40.4477,
+   "optical_deg": 40.5028,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_028_3_r5000.png": {
+   "centre_deg": 51.2725,
+   "optical_deg": 51.2971,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_029_3_r5000.png": {
+   "centre_deg": 60.2692,
+   "optical_deg": 60.2722,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_030_3_r5000.png": {
+   "centre_deg": 48.745,
+   "optical_deg": 48.8038,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_031_3_r5000.png": {
+   "centre_deg": 37.3598,
+   "optical_deg": 37.4331,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_032_3_r5000.png": {
+   "centre_deg": 26.3239,
+   "optical_deg": 26.4101,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_033_3_r5000.png": {
+   "centre_deg": 16.4663,
+   "optical_deg": 16.5461,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_034_3_r5000.png": {
+   "centre_deg": 11.3871,
+   "optical_deg": 11.4447,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_035_3_r5000.png": {
+   "centre_deg": 11.4408,
+   "optical_deg": 11.5036,
+   "nearest_train": "rect_043_3_r5000.png"
+  },
+  "rect_036_3_r5000.png": {
+   "centre_deg": 15.1081,
+   "optical_deg": 15.1942,
+   "nearest_train": "rect_041_3_r5000.png"
+  },
+  "rect_042_3_r5000.png": {
+   "centre_deg": 11.4851,
+   "optical_deg": 11.4796,
+   "nearest_train": "rect_043_3_r5000.png"
+  },
+  "rect_045_3_r5000.png": {
+   "centre_deg": 11.4754,
+   "optical_deg": 11.4523,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_046_3_r5000.png": {
+   "centre_deg": 22.9293,
+   "optical_deg": 22.8948,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_047_3_r5000.png": {
+   "centre_deg": 34.4193,
+   "optical_deg": 34.4464,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_048_3_r5000.png": {
+   "centre_deg": 45.886,
+   "optical_deg": 45.8606,
+   "nearest_train": "rect_044_3_r5000.png"
+  },
+  "rect_049_3_r5000.png": {
+   "centre_deg": 57.333,
+   "optical_deg": 57.27,
+   "nearest_train": "rect_044_3_r5000.png"
+  }
+ },
+ "gap": 0,
+ "shared_with_p0": [
+  "rect_002_3_r5000.png",
+  "rect_003_3_r5000.png",
+  "rect_010_3_r5000.png",
+  "rect_011_3_r5000.png",
+  "rect_012_3_r5000.png",
+  "rect_013_3_r5000.png",
+  "rect_015_3_r5000.png",
+  "rect_025_3_r5000.png",
+  "rect_027_3_r5000.png",
+  "rect_028_3_r5000.png",
+  "rect_030_3_r5000.png",
+  "rect_031_3_r5000.png",
+  "rect_032_3_r5000.png",
+  "rect_033_3_r5000.png",
+  "rect_034_3_r5000.png",
+  "rect_046_3_r5000.png",
+  "rect_047_3_r5000.png",
+  "rect_048_3_r5000.png"
+ ]
+}

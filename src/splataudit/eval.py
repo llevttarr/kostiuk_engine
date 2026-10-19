@@ -71,18 +71,20 @@ def evaluate(
             row[f"lpips_{net}"] = float(fn(pred, gt))
 
         if scene.dataset == "dtu":
+            # regnerf publishes masks for its 25 test views only, so p2 blocks that reach
+            # into its train pool are scored unmasked and say so in the row
             mask = cam.load_mask()
-            if mask is None:
-                raise FileNotFoundError(f"DTU eval mask missing: {cam.mask_path}")
-            m = torch.tensor(mask, device=device, dtype=torch.float32)[None, None]
-            fg = m.bool().expand_as(pred)
-            row["psnr_masked"] = float(-10.0 * torch.log10(((pred - gt)[fg] ** 2).mean()))
-            pred_w, gt_w = pred * m + (1 - m), gt * m + (1 - m)
-            row["ssim_masked"] = float(
-                structural_similarity_index_measure(pred_w, gt_w, data_range=1.0)
-            )
-            for net, fn in lpips.items():
-                row[f"lpips_{net}_masked"] = float(fn(pred_w, gt_w))
+            row["masked"] = mask is not None
+            if mask is not None:
+                m = torch.tensor(mask, device=device, dtype=torch.float32)[None, None]
+                fg = m.bool().expand_as(pred)
+                row["psnr_masked"] = float(-10.0 * torch.log10(((pred - gt)[fg] ** 2).mean()))
+                pred_w, gt_w = pred * m + (1 - m), gt * m + (1 - m)
+                row["ssim_masked"] = float(
+                    structural_similarity_index_measure(pred_w, gt_w, data_range=1.0)
+                )
+                for net, fn in lpips.items():
+                    row[f"lpips_{net}_masked"] = float(fn(pred_w, gt_w))
 
         if ec.get("floater_proxy", False):
             row["floater_proxy"] = _floater_proxy(params, sh_degree, cam, device)

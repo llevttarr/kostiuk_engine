@@ -1,0 +1,382 @@
+{
+ "version": 2,
+ "dataset": "llff",
+ "scene": "horns",
+ "protocol": "p0",
+ "n_views": 3,
+ "k": null,
+ "ordering": "filename",
+ "train": [
+  "DJI_20200223_163017_967.jpg",
+  "DJI_20200223_163053_863.jpg",
+  "DJI_20200223_163225_243.jpg"
+ ],
+ "test": [
+  "DJI_20200223_163016_842.jpg",
+  "DJI_20200223_163024_597.jpg",
+  "DJI_20200223_163033_432.jpg",
+  "DJI_20200223_163047_307.jpg",
+  "DJI_20200223_163055_437.jpg",
+  "DJI_20200223_163103_777.jpg",
+  "DJI_20200223_163201_633.jpg",
+  "DJI_20200223_163208_938.jpg"
+ ],
+ "eval_all": [
+  "DJI_20200223_163016_842.jpg",
+  "DJI_20200223_163018_942.jpg",
+  "DJI_20200223_163019_752.jpg",
+  "DJI_20200223_163020_712.jpg",
+  "DJI_20200223_163021_627.jpg",
+  "DJI_20200223_163022_557.jpg",
+  "DJI_20200223_163023_427.jpg",
+  "DJI_20200223_163024_597.jpg",
+  "DJI_20200223_163025_977.jpg",
+  "DJI_20200223_163028_017.jpg",
+  "DJI_20200223_163029_038.jpg",
+  "DJI_20200223_163029_877.jpg",
+  "DJI_20200223_163030_687.jpg",
+  "DJI_20200223_163031_602.jpg",
+  "DJI_20200223_163032_532.jpg",
+  "DJI_20200223_163033_432.jpg",
+  "DJI_20200223_163034_287.jpg",
+  "DJI_20200223_163035_787.jpg",
+  "DJI_20200223_163036_792.jpg",
+  "DJI_20200223_163042_402.jpg",
+  "DJI_20200223_163043_257.jpg",
+  "DJI_20200223_163045_537.jpg",
+  "DJI_20200223_163046_438.jpg",
+  "DJI_20200223_163047_307.jpg",
+  "DJI_20200223_163048_057.jpg",
+  "DJI_20200223_163049_048.jpg",
+  "DJI_20200223_163050_292.jpg",
+  "DJI_20200223_163052_122.jpg",
+  "DJI_20200223_163053_007.jpg",
+  "DJI_20200223_163054_672.jpg",
+  "DJI_20200223_163055_437.jpg",
+  "DJI_20200223_163056_232.jpg",
+  "DJI_20200223_163056_982.jpg",
+  "DJI_20200223_163057_732.jpg",
+  "DJI_20200223_163058_602.jpg",
+  "DJI_20200223_163101_047.jpg",
+  "DJI_20200223_163101_947.jpg",
+  "DJI_20200223_163102_892.jpg",
+  "DJI_20200223_163103_777.jpg",
+  "DJI_20200223_163104_557.jpg",
+  "DJI_20200223_163105_427.jpg",
+  "DJI_20200223_163106_343.jpg",
+  "DJI_20200223_163156_668.jpg",
+  "DJI_20200223_163157_823.jpg",
+  "DJI_20200223_163159_803.jpg",
+  "DJI_20200223_163200_643.jpg",
+  "DJI_20200223_163201_633.jpg",
+  "DJI_20200223_163202_443.jpg",
+  "DJI_20200223_163203_267.jpg",
+  "DJI_20200223_163204_077.jpg",
+  "DJI_20200223_163204_859.jpg",
+  "DJI_20200223_163205_713.jpg",
+  "DJI_20200223_163206_598.jpg",
+  "DJI_20200223_163208_008.jpg",
+  "DJI_20200223_163208_938.jpg",
+  "DJI_20200223_163209_763.jpg",
+  "DJI_20200223_163210_513.jpg",
+  "DJI_20200223_163222_378.jpg",
+  "DJI_20200223_163224_103.jpg"
+ ],
+ "distances": {
+  "DJI_20200223_163016_842.jpg": {
+   "centre_deg": 1.734,
+   "optical_deg": 1.7927,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163018_942.jpg": {
+   "centre_deg": 2.0946,
+   "optical_deg": 2.6156,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163019_752.jpg": {
+   "centre_deg": 4.2106,
+   "optical_deg": 5.0657,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163020_712.jpg": {
+   "centre_deg": 6.2669,
+   "optical_deg": 7.7489,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163021_627.jpg": {
+   "centre_deg": 7.1402,
+   "optical_deg": 9.1228,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163022_557.jpg": {
+   "centre_deg": 6.4844,
+   "optical_deg": 8.0354,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163023_427.jpg": {
+   "centre_deg": 6.2932,
+   "optical_deg": 7.6615,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163024_597.jpg": {
+   "centre_deg": 6.8782,
+   "optical_deg": 8.1313,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163025_977.jpg": {
+   "centre_deg": 5.8331,
+   "optical_deg": 6.8696,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163028_017.jpg": {
+   "centre_deg": 3.7343,
+   "optical_deg": 4.6702,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163029_038.jpg": {
+   "centre_deg": 4.5751,
+   "optical_deg": 5.8212,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163029_877.jpg": {
+   "centre_deg": 6.0098,
+   "optical_deg": 7.2128,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163030_687.jpg": {
+   "centre_deg": 5.5998,
+   "optical_deg": 7.5701,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163031_602.jpg": {
+   "centre_deg": 3.9176,
+   "optical_deg": 5.2936,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163032_532.jpg": {
+   "centre_deg": 2.927,
+   "optical_deg": 3.9062,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163033_432.jpg": {
+   "centre_deg": 2.4599,
+   "optical_deg": 3.1213,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163034_287.jpg": {
+   "centre_deg": 2.9931,
+   "optical_deg": 3.2043,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163035_787.jpg": {
+   "centre_deg": 4.7997,
+   "optical_deg": 5.9357,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163036_792.jpg": {
+   "centre_deg": 4.4897,
+   "optical_deg": 5.8439,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163042_402.jpg": {
+   "centre_deg": 4.8077,
+   "optical_deg": 6.1864,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163043_257.jpg": {
+   "centre_deg": 5.3273,
+   "optical_deg": 6.8306,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163045_537.jpg": {
+   "centre_deg": 6.0616,
+   "optical_deg": 7.8762,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163046_438.jpg": {
+   "centre_deg": 6.603,
+   "optical_deg": 7.4745,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163047_307.jpg": {
+   "centre_deg": 4.7261,
+   "optical_deg": 5.2701,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163048_057.jpg": {
+   "centre_deg": 2.8917,
+   "optical_deg": 3.7587,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163049_048.jpg": {
+   "centre_deg": 1.4752,
+   "optical_deg": 2.0885,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163050_292.jpg": {
+   "centre_deg": 2.7036,
+   "optical_deg": 2.8269,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163052_122.jpg": {
+   "centre_deg": 3.2832,
+   "optical_deg": 3.5642,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163053_007.jpg": {
+   "centre_deg": 1.8576,
+   "optical_deg": 2.1981,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163054_672.jpg": {
+   "centre_deg": 1.5455,
+   "optical_deg": 1.2429,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163055_437.jpg": {
+   "centre_deg": 3.7562,
+   "optical_deg": 3.0351,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163056_232.jpg": {
+   "centre_deg": 5.6673,
+   "optical_deg": 5.57,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163056_982.jpg": {
+   "centre_deg": 6.9046,
+   "optical_deg": 8.222,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163057_732.jpg": {
+   "centre_deg": 5.8591,
+   "optical_deg": 7.6585,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163058_602.jpg": {
+   "centre_deg": 5.4947,
+   "optical_deg": 6.8735,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163101_047.jpg": {
+   "centre_deg": 7.3847,
+   "optical_deg": 9.4191,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163101_947.jpg": {
+   "centre_deg": 7.1959,
+   "optical_deg": 9.3934,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163102_892.jpg": {
+   "centre_deg": 7.5374,
+   "optical_deg": 9.7393,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163103_777.jpg": {
+   "centre_deg": 7.4434,
+   "optical_deg": 8.6789,
+   "nearest_train": "DJI_20200223_163225_243.jpg"
+  },
+  "DJI_20200223_163104_557.jpg": {
+   "centre_deg": 5.318,
+   "optical_deg": 5.9115,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163105_427.jpg": {
+   "centre_deg": 3.3128,
+   "optical_deg": 3.2508,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163106_343.jpg": {
+   "centre_deg": 1.6907,
+   "optical_deg": 1.1572,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163156_668.jpg": {
+   "centre_deg": 1.4741,
+   "optical_deg": 1.5785,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163157_823.jpg": {
+   "centre_deg": 3.2135,
+   "optical_deg": 3.4817,
+   "nearest_train": "DJI_20200223_163053_863.jpg"
+  },
+  "DJI_20200223_163159_803.jpg": {
+   "centre_deg": 6.1522,
+   "optical_deg": 6.6247,
+   "nearest_train": "DJI_20200223_163225_243.jpg"
+  },
+  "DJI_20200223_163200_643.jpg": {
+   "centre_deg": 3.8209,
+   "optical_deg": 4.407,
+   "nearest_train": "DJI_20200223_163225_243.jpg"
+  },
+  "DJI_20200223_163201_633.jpg": {
+   "centre_deg": 1.3309,
+   "optical_deg": 1.917,
+   "nearest_train": "DJI_20200223_163225_243.jpg"
+  },
+  "DJI_20200223_163202_443.jpg": {
+   "centre_deg": 1.779,
+   "optical_deg": 1.6044,
+   "nearest_train": "DJI_20200223_163225_243.jpg"
+  },
+  "DJI_20200223_163203_267.jpg": {
+   "centre_deg": 4.0231,
+   "optical_deg": 4.4399,
+   "nearest_train": "DJI_20200223_163225_243.jpg"
+  },
+  "DJI_20200223_163204_077.jpg": {
+   "centre_deg": 6.4911,
+   "optical_deg": 7.4477,
+   "nearest_train": "DJI_20200223_163225_243.jpg"
+  },
+  "DJI_20200223_163204_859.jpg": {
+   "centre_deg": 8.6037,
+   "optical_deg": 10.5973,
+   "nearest_train": "DJI_20200223_163225_243.jpg"
+  },
+  "DJI_20200223_163205_713.jpg": {
+   "centre_deg": 9.2727,
+   "optical_deg": 12.0588,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163206_598.jpg": {
+   "centre_deg": 9.0958,
+   "optical_deg": 11.8527,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163208_008.jpg": {
+   "centre_deg": 11.8668,
+   "optical_deg": 15.1683,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163208_938.jpg": {
+   "centre_deg": 11.2735,
+   "optical_deg": 14.7073,
+   "nearest_train": "DJI_20200223_163017_967.jpg"
+  },
+  "DJI_20200223_163209_763.jpg": {
+   "centre_deg": 9.356,
+   "optical_deg": 13.3379,
+   "nearest_train": "DJI_20200223_163225_243.jpg"
+  },
+  "DJI_20200223_163210_513.jpg": {
+   "centre_deg": 7.2623,
+   "optical_deg": 10.5104,
+   "nearest_train": "DJI_20200223_163225_243.jpg"
+  },
+  "DJI_20200223_163222_378.jpg": {
+   "centre_deg": 4.9309,
+   "optical_deg": 5.7451,
+   "nearest_train": "DJI_20200223_163225_243.jpg"
+  },
+  "DJI_20200223_163224_103.jpg": {
+   "centre_deg": 2.4089,
+   "optical_deg": 2.4486,
+   "nearest_train": "DJI_20200223_163225_243.jpg"
+  }
+ }
+}

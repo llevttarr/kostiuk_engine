@@ -1,0 +1,260 @@
+{
+ "version": 2,
+ "dataset": "llff",
+ "scene": "fortress",
+ "protocol": "p0",
+ "n_views": 3,
+ "k": null,
+ "ordering": "filename",
+ "train": [
+  "IMG_1801.JPG",
+  "IMG_1821.JPG",
+  "IMG_1841.JPG"
+ ],
+ "test": [
+  "IMG_1800.JPG",
+  "IMG_1808.JPG",
+  "IMG_1816.JPG",
+  "IMG_1824.JPG",
+  "IMG_1832.JPG",
+  "IMG_1840.JPG"
+ ],
+ "eval_all": [
+  "IMG_1800.JPG",
+  "IMG_1802.JPG",
+  "IMG_1803.JPG",
+  "IMG_1804.JPG",
+  "IMG_1805.JPG",
+  "IMG_1806.JPG",
+  "IMG_1807.JPG",
+  "IMG_1808.JPG",
+  "IMG_1809.JPG",
+  "IMG_1810.JPG",
+  "IMG_1811.JPG",
+  "IMG_1812.JPG",
+  "IMG_1813.JPG",
+  "IMG_1814.JPG",
+  "IMG_1815.JPG",
+  "IMG_1816.JPG",
+  "IMG_1817.JPG",
+  "IMG_1818.JPG",
+  "IMG_1819.JPG",
+  "IMG_1820.JPG",
+  "IMG_1822.JPG",
+  "IMG_1823.JPG",
+  "IMG_1824.JPG",
+  "IMG_1825.JPG",
+  "IMG_1826.JPG",
+  "IMG_1827.JPG",
+  "IMG_1828.JPG",
+  "IMG_1829.JPG",
+  "IMG_1830.JPG",
+  "IMG_1831.JPG",
+  "IMG_1832.JPG",
+  "IMG_1833.JPG",
+  "IMG_1834.JPG",
+  "IMG_1835.JPG",
+  "IMG_1836.JPG",
+  "IMG_1837.JPG",
+  "IMG_1838.JPG",
+  "IMG_1839.JPG",
+  "IMG_1840.JPG"
+ ],
+ "distances": {
+  "IMG_1800.JPG": {
+   "centre_deg": 4.2035,
+   "optical_deg": 0.1581,
+   "nearest_train": "IMG_1801.JPG"
+  },
+  "IMG_1802.JPG": {
+   "centre_deg": 4.7357,
+   "optical_deg": 0.3908,
+   "nearest_train": "IMG_1801.JPG"
+  },
+  "IMG_1803.JPG": {
+   "centre_deg": 9.5214,
+   "optical_deg": 0.3414,
+   "nearest_train": "IMG_1801.JPG"
+  },
+  "IMG_1804.JPG": {
+   "centre_deg": 13.0921,
+   "optical_deg": 0.4342,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1805.JPG": {
+   "centre_deg": 16.8943,
+   "optical_deg": 2.0517,
+   "nearest_train": "IMG_1841.JPG"
+  },
+  "IMG_1806.JPG": {
+   "centre_deg": 13.7377,
+   "optical_deg": 1.8992,
+   "nearest_train": "IMG_1841.JPG"
+  },
+  "IMG_1807.JPG": {
+   "centre_deg": 13.3143,
+   "optical_deg": 1.536,
+   "nearest_train": "IMG_1841.JPG"
+  },
+  "IMG_1808.JPG": {
+   "centre_deg": 10.5678,
+   "optical_deg": 1.4511,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1809.JPG": {
+   "centre_deg": 6.9299,
+   "optical_deg": 1.5237,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1810.JPG": {
+   "centre_deg": 4.0512,
+   "optical_deg": 2.187,
+   "nearest_train": "IMG_1801.JPG"
+  },
+  "IMG_1811.JPG": {
+   "centre_deg": 5.6122,
+   "optical_deg": 2.2231,
+   "nearest_train": "IMG_1801.JPG"
+  },
+  "IMG_1812.JPG": {
+   "centre_deg": 8.8603,
+   "optical_deg": 2.4364,
+   "nearest_train": "IMG_1801.JPG"
+  },
+  "IMG_1813.JPG": {
+   "centre_deg": 7.0314,
+   "optical_deg": 2.3845,
+   "nearest_train": "IMG_1801.JPG"
+  },
+  "IMG_1814.JPG": {
+   "centre_deg": 3.7482,
+   "optical_deg": 2.8958,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1815.JPG": {
+   "centre_deg": 5.0693,
+   "optical_deg": 3.0204,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1816.JPG": {
+   "centre_deg": 9.8195,
+   "optical_deg": 2.5238,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1817.JPG": {
+   "centre_deg": 11.0077,
+   "optical_deg": 2.4108,
+   "nearest_train": "IMG_1841.JPG"
+  },
+  "IMG_1818.JPG": {
+   "centre_deg": 7.7366,
+   "optical_deg": 1.7175,
+   "nearest_train": "IMG_1841.JPG"
+  },
+  "IMG_1819.JPG": {
+   "centre_deg": 7.4191,
+   "optical_deg": 1.3895,
+   "nearest_train": "IMG_1841.JPG"
+  },
+  "IMG_1820.JPG": {
+   "centre_deg": 5.6044,
+   "optical_deg": 0.9136,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1822.JPG": {
+   "centre_deg": 5.25,
+   "optical_deg": 1.7412,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1823.JPG": {
+   "centre_deg": 10.8303,
+   "optical_deg": 2.1793,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1824.JPG": {
+   "centre_deg": 11.4342,
+   "optical_deg": 3.6004,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1825.JPG": {
+   "centre_deg": 6.6384,
+   "optical_deg": 2.6635,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1826.JPG": {
+   "centre_deg": 2.9674,
+   "optical_deg": 1.8164,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1827.JPG": {
+   "centre_deg": 7.6346,
+   "optical_deg": 1.1076,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1828.JPG": {
+   "centre_deg": 5.2336,
+   "optical_deg": 0.6577,
+   "nearest_train": "IMG_1841.JPG"
+  },
+  "IMG_1829.JPG": {
+   "centre_deg": 6.5038,
+   "optical_deg": 0.8274,
+   "nearest_train": "IMG_1841.JPG"
+  },
+  "IMG_1830.JPG": {
+   "centre_deg": 4.6045,
+   "optical_deg": 1.9903,
+   "nearest_train": "IMG_1841.JPG"
+  },
+  "IMG_1831.JPG": {
+   "centre_deg": 1.6108,
+   "optical_deg": 2.51,
+   "nearest_train": "IMG_1841.JPG"
+  },
+  "IMG_1832.JPG": {
+   "centre_deg": 8.3817,
+   "optical_deg": 2.1012,
+   "nearest_train": "IMG_1841.JPG"
+  },
+  "IMG_1833.JPG": {
+   "centre_deg": 6.9472,
+   "optical_deg": 3.123,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1834.JPG": {
+   "centre_deg": 8.9606,
+   "optical_deg": 3.907,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1835.JPG": {
+   "centre_deg": 11.6572,
+   "optical_deg": 4.1088,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1836.JPG": {
+   "centre_deg": 15.9222,
+   "optical_deg": 5.9012,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1837.JPG": {
+   "centre_deg": 12.4352,
+   "optical_deg": 5.3037,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1838.JPG": {
+   "centre_deg": 9.4851,
+   "optical_deg": 3.4456,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1839.JPG": {
+   "centre_deg": 7.8134,
+   "optical_deg": 1.4611,
+   "nearest_train": "IMG_1821.JPG"
+  },
+  "IMG_1840.JPG": {
+   "centre_deg": 6.7957,
+   "optical_deg": 0.3302,
+   "nearest_train": "IMG_1841.JPG"
+  }
+ }
+}

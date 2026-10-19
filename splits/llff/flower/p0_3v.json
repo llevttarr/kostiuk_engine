@@ -1,0 +1,211 @@
+{
+ "version": 2,
+ "dataset": "llff",
+ "scene": "flower",
+ "protocol": "p0",
+ "n_views": 3,
+ "k": null,
+ "ordering": "filename",
+ "train": [
+  "IMG_2963.JPG",
+  "IMG_2979.JPG",
+  "IMG_2995.JPG"
+ ],
+ "test": [
+  "IMG_2962.JPG",
+  "IMG_2970.JPG",
+  "IMG_2978.JPG",
+  "IMG_2986.JPG",
+  "IMG_2994.JPG"
+ ],
+ "eval_all": [
+  "IMG_2962.JPG",
+  "IMG_2964.JPG",
+  "IMG_2965.JPG",
+  "IMG_2966.JPG",
+  "IMG_2967.JPG",
+  "IMG_2968.JPG",
+  "IMG_2969.JPG",
+  "IMG_2970.JPG",
+  "IMG_2971.JPG",
+  "IMG_2972.JPG",
+  "IMG_2973.JPG",
+  "IMG_2974.JPG",
+  "IMG_2975.JPG",
+  "IMG_2976.JPG",
+  "IMG_2977.JPG",
+  "IMG_2978.JPG",
+  "IMG_2980.JPG",
+  "IMG_2981.JPG",
+  "IMG_2982.JPG",
+  "IMG_2983.JPG",
+  "IMG_2984.JPG",
+  "IMG_2985.JPG",
+  "IMG_2986.JPG",
+  "IMG_2987.JPG",
+  "IMG_2988.JPG",
+  "IMG_2989.JPG",
+  "IMG_2990.JPG",
+  "IMG_2991.JPG",
+  "IMG_2992.JPG",
+  "IMG_2993.JPG",
+  "IMG_2994.JPG"
+ ],
+ "distances": {
+  "IMG_2962.JPG": {
+   "centre_deg": 1.0294,
+   "optical_deg": 0.2956,
+   "nearest_train": "IMG_2963.JPG"
+  },
+  "IMG_2964.JPG": {
+   "centre_deg": 0.8203,
+   "optical_deg": 0.1892,
+   "nearest_train": "IMG_2963.JPG"
+  },
+  "IMG_2965.JPG": {
+   "centre_deg": 2.3422,
+   "optical_deg": 0.5915,
+   "nearest_train": "IMG_2963.JPG"
+  },
+  "IMG_2966.JPG": {
+   "centre_deg": 2.9377,
+   "optical_deg": 0.7157,
+   "nearest_train": "IMG_2963.JPG"
+  },
+  "IMG_2967.JPG": {
+   "centre_deg": 4.3358,
+   "optical_deg": 1.608,
+   "nearest_train": "IMG_2963.JPG"
+  },
+  "IMG_2968.JPG": {
+   "centre_deg": 5.5892,
+   "optical_deg": 2.5967,
+   "nearest_train": "IMG_2963.JPG"
+  },
+  "IMG_2969.JPG": {
+   "centre_deg": 6.3857,
+   "optical_deg": 2.9607,
+   "nearest_train": "IMG_2963.JPG"
+  },
+  "IMG_2970.JPG": {
+   "centre_deg": 7.2414,
+   "optical_deg": 3.6771,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2971.JPG": {
+   "centre_deg": 6.8332,
+   "optical_deg": 3.5023,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2972.JPG": {
+   "centre_deg": 5.7142,
+   "optical_deg": 2.4735,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2973.JPG": {
+   "centre_deg": 4.8828,
+   "optical_deg": 1.7241,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2974.JPG": {
+   "centre_deg": 3.861,
+   "optical_deg": 0.776,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2975.JPG": {
+   "centre_deg": 3.0594,
+   "optical_deg": 0.3343,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2976.JPG": {
+   "centre_deg": 1.9992,
+   "optical_deg": 0.7659,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2977.JPG": {
+   "centre_deg": 1.056,
+   "optical_deg": 1.5216,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2978.JPG": {
+   "centre_deg": 0.5818,
+   "optical_deg": 0.5573,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2980.JPG": {
+   "centre_deg": 1.0262,
+   "optical_deg": 0.7325,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2981.JPG": {
+   "centre_deg": 2.077,
+   "optical_deg": 1.5039,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2982.JPG": {
+   "centre_deg": 2.9734,
+   "optical_deg": 0.753,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2983.JPG": {
+   "centre_deg": 4.0843,
+   "optical_deg": 0.9911,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2984.JPG": {
+   "centre_deg": 5.2582,
+   "optical_deg": 1.5685,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2985.JPG": {
+   "centre_deg": 6.7532,
+   "optical_deg": 2.9401,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2986.JPG": {
+   "centre_deg": 6.7492,
+   "optical_deg": 3.3049,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2987.JPG": {
+   "centre_deg": 8.2315,
+   "optical_deg": 4.7183,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2988.JPG": {
+   "centre_deg": 7.4901,
+   "optical_deg": 4.2497,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2989.JPG": {
+   "centre_deg": 6.2624,
+   "optical_deg": 3.4749,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2990.JPG": {
+   "centre_deg": 5.373,
+   "optical_deg": 2.8317,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2991.JPG": {
+   "centre_deg": 4.4467,
+   "optical_deg": 2.2065,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2992.JPG": {
+   "centre_deg": 3.5699,
+   "optical_deg": 1.7241,
+   "nearest_train": "IMG_2979.JPG"
+  },
+  "IMG_2993.JPG": {
+   "centre_deg": 2.3674,
+   "optical_deg": 1.203,
+   "nearest_train": "IMG_2995.JPG"
+  },
+  "IMG_2994.JPG": {
+   "centre_deg": 1.5231,
+   "optical_deg": 1.6436,
+   "nearest_train": "IMG_2995.JPG"
+  }
+ }
+}

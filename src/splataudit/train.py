@@ -58,7 +58,6 @@ def train(
         ``means``, ``quats``, ``scales``, ``opacities``, ``sh0``, ``shN``,
         ``sh_degree``, ``n_gaussians``.
     """
-    from gsplat import rasterization
     from gsplat.strategy import DefaultStrategy
     from torchmetrics.image import StructuralSimilarityIndexMeasure
 
@@ -99,39 +98,23 @@ def train(
         sh_degree = min(tc["sh_degree"], step // 1000)
 
         cam = sampler.next()
-        viewmat = torch.tensor(cam.w2c, dtype=torch.float32, device=device).unsqueeze(0)
-        K_mat = torch.tensor(cam.K, dtype=torch.float32, device=device).unsqueeze(0)
         gt_img = _load_gt(cam, device)  # (1, 3, H, W) float32 [0,1]
+        render = _make_render(cam, sh_degree, device)
+        act = _activate(params)
+
+        render_out = render(method.pre_render(dict(act), step))
+        info = render_out["info"]
 
         batch = {
             "camera": cam,
             "gt_image": gt_img,
+            "act": act,
+            "render": render,
             "depth": d_gpu.get(cam.image_id),
             "confidence": c_gpu.get(cam.image_id),
         }
 
-        rp = method.pre_render(dict(params), step)
-
-        renders, alphas, info = rasterization(
-            means=rp["means"],
-            quats=F.normalize(rp["quats"], dim=-1),
-            scales=torch.exp(rp["scales"]),
-            opacities=torch.sigmoid(rp["opacities"]),
-            colors=torch.cat([rp["sh0"], rp["shN"]], dim=1),  # (N, K, 3)
-            viewmats=viewmat,
-            Ks=K_mat,
-            width=cam.width,
-            height=cam.height,
-            sh_degree=sh_degree,
-            render_mode="RGB+D",
-            packed=False,
-        )
-        # renders: (1, H, W, 4);  last channel = depth
-        render_rgb = renders[0, :, :, :3].permute(2, 0, 1).unsqueeze(0)  # (1,3,H,W)
-        render_depth = renders[0, :, :, 3]  # (H,W)
-
-        render_out = {"rgb": render_rgb, "depth": render_depth, "alpha": alphas[0]}
-
+        render_rgb = render_out["rgb"]
         l1 = F.l1_loss(render_rgb, gt_img)
         lssim = 1.0 - ssim_fn(render_rgb, gt_img)
         loss = (1.0 - tc["lambda_dssim"]) * l1 + tc["lambda_dssim"] * lssim
@@ -167,6 +150,52 @@ def train(
         "sh_degree": tc["sh_degree"],
         "n_gaussians": params["means"].shape[0],
     }
+
+
+def _activate(params):
+    """Raw parameters -> what gsplat rasterises: unit quats, exp scales, sigmoid opacities, sh colours."""
+    return {
+        "means": params["means"],
+        "quats": F.normalize(params["quats"], dim=-1),
+        "scales": torch.exp(params["scales"]),
+        "opacities": torch.sigmoid(params["opacities"]),
+        "colors": torch.cat([params["sh0"], params["shN"]], dim=1),
+    }
+
+
+def _make_render(cam, sh_degree, device):
+    """Renderer for one camera: activated gaussians -> rgb (1,3,H,W), depth (H,W), alpha, gsplat info."""
+    from gsplat import rasterization
+
+    viewmat = torch.tensor(cam.w2c, dtype=torch.float32, device=device).unsqueeze(0)
+    K_mat = torch.tensor(cam.K, dtype=torch.float32, device=device).unsqueeze(0)
+
+    def render(act, mode="RGB+D"):
+        colors = act["colors"]
+        renders, alphas, info = rasterization(
+            means=act["means"],
+            quats=act["quats"],
+            scales=act["scales"],
+            opacities=act["opacities"],
+            colors=colors,
+            viewmats=viewmat,
+            Ks=K_mat,
+            width=cam.width,
+            height=cam.height,
+            sh_degree=None if colors.dim() == 2 else sh_degree,
+            render_mode=mode,
+            packed=False,
+        )
+        out = {
+            "rgb": renders[0, :, :, :3].permute(2, 0, 1).unsqueeze(0),
+            "alpha": alphas[0],
+            "info": info,
+        }
+        if "D" in mode:
+            out["depth"] = renders[0, :, :, 3]
+        return out
+
+    return render
 
 
 def _init_gaussians(

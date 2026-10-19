@@ -18,6 +18,9 @@ from splataudit.utils import (
     run_tag,
 )
 
+RUN_MINUTES = {"llff": 4.0, "dtu": 3.0, "mip360": 8.0}
+METHOD_COST = {"vanilla": 1.0, "dropgaussian": 1.05, "fsgs": 1.1, "dngaussian": 2.6}
+
 
 def load_config(path):
     return yaml.safe_load(Path(path).read_text())
@@ -76,9 +79,12 @@ def run_cell(cfg):
 
         depths = confidence_maps = None
         if method.requires_depth:
-            from splataudit.priors import confidence, depth_prior
+            from splataudit.priors import depth_prior
 
             depths = depth_prior(scene, ids["train"], cfg["cache_root"])
+        if method.requires_confidence:
+            from splataudit.priors import confidence
+
             confidence_maps = confidence(scene, ids["train"], depths)
 
         from splataudit.eval import evaluate
@@ -104,40 +110,70 @@ def run_cell(cfg):
     return rows
 
 
-def sweep(cfg):
-    """Run the cfg["sweep"] grid, skipping runs that already have ok rows."""
+def plan_sweep(cfg):
+    """Every cell of the sweep grid, in the order they would run."""
     from splataudit.splits import SECTOR_POSITIONS
 
-    cfg = with_defaults(cfg)
     sw = cfg["sweep"]
-    done = finished_runs(Path(cfg["output_dir"]) / "results.csv")
+    cells = []
+    for dataset in sw.get("datasets") or [cfg["dataset"]]:
+        base = with_defaults({**cfg, "dataset": dataset})
+        protocols = sw["protocols"]
+        protocols = protocols.get(dataset, []) if isinstance(protocols, dict) else protocols
+        protocol_k = []
+        for protocol in protocols:
+            if protocol == "p0":
+                protocol_k.append(("p0", None))
+            else:
+                n = min(sw.get("p2_positions") or 99, SECTOR_POSITIONS[dataset])
+                protocol_k += [("p2", k) for k in range(n)]
+        for scene, (protocol, k), init, method, seed in itertools.product(
+            base["scenes"], protocol_k, sw["inits"], sw["methods"], sw["seeds"]
+        ):
+            cells.append(
+                base
+                | {
+                    "scene": scene,
+                    "protocol": protocol,
+                    "k": k,
+                    "init": init,
+                    "method": method,
+                    "seed": seed,
+                }
+            )
+    return cells
 
-    protocol_k = []
-    for protocol in sw["protocols"]:
-        if protocol == "p0":
-            protocol_k.append(("p0", None))
-        else:
-            protocol_k += [("p2", k) for k in range(SECTOR_POSITIONS[cfg["dataset"]])]
+
+def estimate_hours(cells, results_csv=None):
+    """Rough wall clock for a list of cells, from measured train_time_s when results exist."""
+    measured = {}
+    if results_csv and Path(results_csv).exists():
+        df = pd.read_csv(results_csv)
+        ok = df[df["status"] == "ok"].drop_duplicates(RUN_KEYS)
+        if not ok.empty:
+            measured = (ok.groupby(["dataset", "method"])["train_time_s"].mean() / 60).to_dict()
+    minutes = 0.0
+    for c in cells:
+        fallback = RUN_MINUTES[c["dataset"]] * METHOD_COST.get(c["method"], 1.0)
+        minutes += measured.get((c["dataset"], c["method"]), fallback)
+    return minutes / 60
+
+
+def sweep(cfg, max_runs=None):
+    """Run the sweep grid, skipping cells that already have rows, returns the new row count."""
+    done = finished_runs(Path(cfg["output_dir"]) / "results.csv")
+    cells = [c for c in plan_sweep(cfg) if run_key(c) not in done]
+    if max_runs:
+        cells = cells[:max_runs]
 
     n_rows = 0
-    for scene, (protocol, k), init, method, seed in itertools.product(
-        cfg["scenes"], protocol_k, sw["inits"], sw["methods"], sw["seeds"]
-    ):
-        cell = cfg | {
-            "scene": scene,
-            "protocol": protocol,
-            "k": k,
-            "init": init,
-            "method": method,
-            "seed": seed,
-        }
-        if run_key(cell) in done:
-            continue
+    for i, cell in enumerate(cells, 1):
         rows = run_cell(cell)
         n_rows += len(rows)
         status = rows[0]["status"]
         print(
-            f"[{status}] {run_tag(cell)}" + (f" {rows[0].get('error')}" if status != "ok" else "")
+            f"[{i}/{len(cells)}] [{status}] {run_tag(cell)}"
+            + (f" {rows[0].get('error')}" if status != "ok" else "")
         )
     return n_rows
 
@@ -168,17 +204,16 @@ def report(df, metrics=("psnr", "ssim", "lpips_vgg")):
 
 
 def build_method(cfg):
-    from splataudit import methods as M
+    """Method instance for cfg["method"], hyperparameters taken from cfg["methods"][name]."""
+    from splataudit import methods
 
     name = cfg["method"]
-    if name == "vanilla":
-        return M.Vanilla()
-    if name == "fsgs":
-        return M.FSGS()
-    if name == "dngaussian":
-        return M.DNGaussian()
-    if name == "dropgaussian":
-        return M.DropGaussian(drop_rate=cfg.get("drop_rate", 0.1))
-    if name == "cross_view_gating":
-        return M.CrossViewGating(confidence_threshold=cfg.get("confidence_threshold", 0.5))
-    raise ValueError(f"unknown method {name}")
+    if name not in methods.METHODS:
+        raise ValueError(f"unknown method {name}")
+    params = {
+        **(cfg.get("methods") or {}).get(name, {}),
+        "dataset": cfg["dataset"],
+        "seed": cfg["seed"],
+        "iterations": cfg["train"]["iterations"],
+    }
+    return methods.build(name, params)

@@ -14,10 +14,15 @@ k: null
 seed: 0
 
 sweep:
-  inits: [random, sparse_sfm, dense_mvs, foundation]
+  datasets: [llff, dtu, mip360]
+  protocols:
+    llff: [p0]
+    dtu: [p0]
+    mip360: [p0, p2]
+  p2_positions: 1
+  inits: [random, sparse_sfm, foundation]
   methods: [vanilla, fsgs, dngaussian, dropgaussian]
-  protocols: [p0, p2]
-  seeds: [0, 1, 2]
+  seeds: [0]
 
 train:
   iterations: 10000
@@ -30,10 +35,26 @@ train:
   opacity_reset_every: 3000
   prune_opacity: 0.005
 
+methods:
+  fsgs:
+    depth_weight: 0.05
+    depth_weight_late: 0.001
+    depth_weight_late_from: 9500
+  dngaussian:
+    local_weight: 0.1
+    global_weight: 1.0
+    smooth_weight: 0.1
+    smooth_start: 3000
+    error_tolerance: 0.2
+    hard_depth_start: 0
+    soft_depth_start: 1000
+    hard_opacity: 0.95
+    shape_pena: 0.001
+    scale_pena: 0.001
+    opa_pena: 0.01
+  dropgaussian:
+    drop_rate: 0.2
+
 eval:
   lpips_nets: [vgg, alex]
   floater_proxy: false
-
-depth_lambda: 0.05
-drop_rate: 0.1
-confidence_threshold: 0.5

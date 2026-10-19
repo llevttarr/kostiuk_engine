@@ -21,6 +21,7 @@ FIELDS = [
     "ssim",
     "lpips_vgg",
     "lpips_alex",
+    "masked",
     "psnr_masked",
     "ssim_masked",
     "lpips_vgg_masked",

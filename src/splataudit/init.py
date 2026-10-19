@@ -8,6 +8,7 @@ import numpy as np
 
 INITS = ("random", "sparse_sfm", "dense_mvs", "foundation")
 SEEDED_INITS = {"random"}
+VGGT_MODEL = "facebook/VGGT-1B"
 
 FSGS_SFM = {  # tools/colmap_llff.py
     "max_image_size": 4032,
@@ -165,9 +166,60 @@ def dense_mvs_init(scene, train_ids):
         return read_fused_ply(dense / "fused.ply")
 
 
-def foundation_init(scene, train_ids):
-    """Dust3r / mast3r / vggt pointmaps on the train views."""
-    raise NotImplementedError("foundation init not implemented yet (needs torch + model weights)")
+def foundation_init(scene, train_ids, max_points=100_000, conf_quantile=0.5):
+    """Vggt pointmaps on the train views, moved into the dataset frame by a sim(3) on the cameras."""
+    import torch
+
+    try:
+        from vggt.models.vggt import VGGT
+        from vggt.utils.load_fn import load_and_preprocess_images
+        from vggt.utils.pose_enc import pose_encoding_to_extri_intri
+    except ImportError:
+        raise NotImplementedError(
+            "foundation init needs vggt: pip install git+https://github.com/facebookresearch/vggt"
+        ) from None
+
+    cams = [scene.get_camera(i) for i in train_ids]
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = VGGT.from_pretrained(VGGT_MODEL).to(device).eval()
+    images = load_and_preprocess_images([str(c.image_path) for c in cams]).to(device)
+    half = torch.bfloat16 if device == "cuda" and torch.cuda.is_bf16_supported() else torch.float16
+    with torch.no_grad(), torch.autocast(device_type=device, dtype=half):
+        pred = model(images)
+
+    extr, _ = pose_encoding_to_extri_intri(pred["pose_enc"].float(), images.shape[-2:])
+    extr = extr[0].cpu().numpy()
+    pts = pred["world_points"][0].float().cpu().numpy().reshape(-1, 3)
+    conf = pred["world_points_conf"][0].float().cpu().numpy().reshape(-1)
+    rgb = images.permute(0, 2, 3, 1).float().cpu().numpy().reshape(-1, 3)
+
+    s, R, T = align_sim3([(e[:3, :3], e[:3, 3]) for e in extr], [(c.R, c.t) for c in cams])
+    xyz = s * (pts @ R.T) + T
+
+    keep = conf >= np.quantile(conf, conf_quantile)
+    xyz, rgb = xyz[keep], rgb[keep]
+    assert len(xyz), "vggt returned no confident points"
+    if len(xyz) > max_points:
+        idx = np.random.default_rng(0).choice(len(xyz), max_points, replace=False)
+        xyz, rgb = xyz[idx], rgb[idx]
+    return xyz.astype(np.float32), rgb.clip(0, 1).astype(np.float32)
+
+
+def align_sim3(src, dst):
+    """Sim(3) (s, R, T) with world_dst = s R world_src + T, fitted from matched (R, t) camera poses."""
+    rot = sum(d[0].T @ s[0] for s, d in zip(src, dst, strict=True))
+    u, _, vt = np.linalg.svd(rot)
+    if np.linalg.det(u @ vt) < 0:
+        u[:, -1] *= -1
+    R = u @ vt
+    cs = np.array([-r.T @ t for r, t in src])
+    cd = np.array([-r.T @ t for r, t in dst])
+    ds = np.linalg.norm(cs[:, None] - cs[None], axis=2)
+    dd = np.linalg.norm(cd[:, None] - cd[None], axis=2)
+    off = ds > 1e-12
+    assert off.any(), "all source cameras share one centre, scale is unconstrained"
+    s = float(dd[off].mean() / ds[off].mean())
+    return s, R, (cd - s * (cs @ R.T)).mean(axis=0)
 
 
 def triangulate(scene, train_ids, tmp, s):
