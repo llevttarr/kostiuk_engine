@@ -10,17 +10,17 @@ INITS = ("random", "sparse_sfm", "dense_mvs", "foundation")
 SEEDED_INITS = {"random"}
 VGGT_MODEL = "facebook/VGGT-1B"
 
-FSGS_SFM = {  # tools/colmap_llff.py
-    "max_image_size": 4032,
-    "max_num_features": 32768,
-    "estimate_affine_shape": True,
-    "domain_size_pooling": True,
-    "guided_matching": True,
+FSGS_SFM = {  # tools/colmap_llff.py (CPU-safe: octave -1 upsamples 2000->4000px)
+    "max_image_size": 2000,
+    "max_num_features": 16384,
+    "estimate_affine_shape": False,
+    "domain_size_pooling": False,
+    "guided_matching": False,
     "max_num_matches": 32768,
     "ba_local_max_num_iterations": 40,
     "ba_local_max_refinements": 3,
     "ba_global_max_num_iterations": 100,
-    "num_threads": -1,
+    "num_threads": 2,
 }
 SMOKE_SFM = {
     **FSGS_SFM,
@@ -180,6 +180,9 @@ def dense_mvs_init(scene, train_ids):
         return read_fused_ply(dense / "fused.ply")
 
 
+_VGGT_CACHE = {}
+
+
 def foundation_init(scene, train_ids, max_points=100_000, conf_quantile=0.5):
     """Vggt pointmaps on the train views, moved into the dataset frame by a sim(3) on the cameras."""
     import torch
@@ -195,7 +198,9 @@ def foundation_init(scene, train_ids, max_points=100_000, conf_quantile=0.5):
 
     cams = [scene.get_camera(i) for i in train_ids]
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = VGGT.from_pretrained(VGGT_MODEL).to(device).eval()
+    if device not in _VGGT_CACHE:
+        _VGGT_CACHE[device] = VGGT.from_pretrained(VGGT_MODEL).to(device).eval()
+    model = _VGGT_CACHE[device]
     images = load_and_preprocess_images([str(c.image_path) for c in cams]).to(device)
     half = torch.bfloat16 if device == "cuda" and torch.cuda.is_bf16_supported() else torch.float16
     with torch.no_grad(), torch.autocast(device_type=device, dtype=half):

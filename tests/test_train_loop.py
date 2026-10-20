@@ -33,13 +33,14 @@ def stub_rasterization(
     total = (
         means.sum() + quats.sum() + scales.sum() + opacities.sum() + colors.sum()
     ) / means.shape[0]
-    ramp = torch.linspace(0.1, 0.9, height * width).reshape(1, height, width, 1)
+    dev = means.device
+    ramp = torch.linspace(0.1, 0.9, height * width, device=dev).reshape(1, height, width, 1)
     renders = ramp * total
     renders = renders.expand(1, height, width, 4).clone()
     means2d = (means[:, :2] * 1.0).unsqueeze(0)
     if means2d.requires_grad:  # dngaussian's soft render detaches the means
         means2d.retain_grad()
-    return renders, torch.ones(1, height, width, 1) * total, {"means2d": means2d}
+    return renders, torch.ones(1, height, width, 1, device=dev) * total, {"means2d": means2d}
 
 
 class StubStrategy:

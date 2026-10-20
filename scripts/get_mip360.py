@@ -49,11 +49,11 @@ def get(scenes, small=False):
         if small:
             sel = [n for n in sel if n.split("/", 1)[-1].startswith(SMALL_PARTS)]
         gb = sum(z.getinfo(n).file_size for n in sel) / 2 ** 30
-        print(f"{name}: {sorted(pick)}, {len(sel)} files, {gb:.2f} GB")
+        print(f"{name}: {sorted(pick)}, {len(sel)} files, {gb:.2f} GB", flush=True)
         for i, n in enumerate(sel, 1):
             z.extract(n, OUT)
             if i % 50 == 0 or i == len(sel):
-                print(f"  {i}/{len(sel)}")
+                print(f"  {i}/{len(sel)}", flush=True)
 if __name__ == "__main__":
     args = sys.argv[1:]
     if not args or args[0] == "list":

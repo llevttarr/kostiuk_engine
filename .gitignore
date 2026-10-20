@@ -8,7 +8,8 @@ __pycache__/
 
 # datasets, weights, run outputs
 data/
-results/
+results/*
+!results/results.csv
 cache/
 external/*
 !external/.gitkeep

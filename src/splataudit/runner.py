@@ -233,6 +233,7 @@ def report(df, metrics=("psnr", "ssim", "lpips_vgg")):
         out[(m, "std_seeds")] = per_scene[(m, "std")].groupby(level=cell).mean()
     summary = pd.DataFrame(out)
     summary[("n", "scenes")] = per_scene.groupby(level=cell).size()
+    status.columns = pd.MultiIndex.from_product([["status"], status.columns])
     return summary.join(status, how="outer").round(3)
 
 

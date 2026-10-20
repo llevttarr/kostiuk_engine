@@ -28,7 +28,8 @@ class HttpFile(io.RawIOBase):
     def __init__(self, url):
         self.url = url
         self.pos = 0
-        h = requests.head(url, allow_redirects=True, timeout=30).headers
+        self.session = requests.Session()
+        h = self.session.head(url, allow_redirects=True, timeout=30).headers
         self.size = int(h["Content-Length"])
         assert h.get("Accept-Ranges") == "bytes", "server has no range support"
 
@@ -50,7 +51,7 @@ class HttpFile(io.RawIOBase):
         if n <= 0:
             return b""
         rng = f"bytes={self.pos}-{self.pos + n - 1}"
-        r = requests.get(self.url, headers={"Range": rng}, timeout=120)
+        r = self.session.get(self.url, headers={"Range": rng}, timeout=120)
         r.raise_for_status()
         self.pos += len(r.content)
         return r.content
@@ -96,14 +97,14 @@ def get(scans, light=None, points=False):
         z = open_zip(name)
         sel = [n for n in z.namelist() if keep(n)]
         gb = sum(z.getinfo(n).file_size for n in sel) / 2**30
-        print(f"{name}: {len(sel)} files, {gb:.2f} GB")
+        print(f"{name}: {len(sel)} files, {gb:.2f} GB", flush=True)
         if not sel:
-            print("  nothing matched, run `list` and fix the filter")
+            print("  nothing matched, run `list` and fix the filter", flush=True)
             continue
         for i, n in enumerate(sel, 1):
             z.extract(n, OUT)
             if i % 25 == 0 or i == len(sel):
-                print(f"  {i}/{len(sel)}")
+                print(f"  {i}/{len(sel)}", flush=True)
 
 
 def get_calib():

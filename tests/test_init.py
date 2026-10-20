@@ -79,8 +79,11 @@ def test_init_path_tags_only_the_seeded_inits():
     assert init_path("cache", "llff", "fern", "p0_3v", "sparse_sfm", 2).name == "sparse_sfm.ply"
 
 
-def test_foundation_init_reports_its_missing_dependency():
+def test_foundation_init_reports_its_missing_dependency(monkeypatch):
+    import sys
+
     pytest.importorskip("torch")
+    monkeypatch.setitem(sys.modules, "vggt.models.vggt", None)
     with pytest.raises(NotImplementedError, match="vggt"):
         compute_init("foundation", None, [0], None)
 
