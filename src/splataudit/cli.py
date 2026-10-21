@@ -180,6 +180,20 @@ def _strip_gpus_arg(argv):
     return out
 
 
+def _warmup_gsplat(gpu):
+    """Pre-compile gsplat CUDA extension in a single subprocess so multi-GPU workers do not collide."""
+    import os
+    import subprocess
+    import sys
+
+    code = "from gsplat.cuda._backend import _C; assert _C is not None"
+    subprocess.run(
+        [sys.executable, "-c", code],
+        env={**os.environ, "CUDA_VISIBLE_DEVICES": str(gpu), "MAX_JOBS": "4"},
+        check=False,
+    )
+
+
 def sweep(args):
     import os
     import subprocess
@@ -225,6 +239,7 @@ def sweep(args):
         return
 
     if args.gpus and len(args.gpus) > 1:
+        _warmup_gsplat(args.gpus[0])
         notify(f"sweep starting: {len(todo)} cells on GPUs {args.gpus} (est {est_h:.1f}h)")
         child_argv = _strip_gpus_arg(sys.argv[1:])
         procs = [

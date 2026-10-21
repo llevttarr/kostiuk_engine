@@ -198,19 +198,41 @@ def foundation_init(scene, train_ids, max_points=100_000, conf_quantile=0.5):
 
     cams = [scene.get_camera(i) for i in train_ids]
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cuda":
+        torch.cuda.empty_cache()
     if device not in _VGGT_CACHE:
-        _VGGT_CACHE[device] = VGGT.from_pretrained(VGGT_MODEL).to(device).eval()
+        m = VGGT.from_pretrained(VGGT_MODEL).to(device).eval()
+        m.depth_head = None
+        m.track_head = None
+        if getattr(m, "point_head", None) is not None and hasattr(m.point_head, "frames_chunk_size"):
+            m.point_head.frames_chunk_size = 2
+        _VGGT_CACHE[device] = m
     model = _VGGT_CACHE[device]
     images = load_and_preprocess_images([str(c.image_path) for c in cams]).to(device)
-    half = torch.bfloat16 if device == "cuda" and torch.cuda.is_bf16_supported() else torch.float16
-    with torch.no_grad(), torch.autocast(device_type=device, dtype=half):
-        pred = model(images)
+    use_bf16 = device == "cuda" and torch.cuda.get_device_capability()[0] >= 8
+    half = torch.bfloat16 if use_bf16 else torch.float16
+    try:
+        with torch.no_grad(), torch.autocast(device_type=device, dtype=half):
+            pred = model(images)
+    except torch.cuda.OutOfMemoryError:
+        _VGGT_CACHE.clear()
+        torch.cuda.empty_cache()
+        device = "cpu"
+        m = VGGT.from_pretrained(VGGT_MODEL).to(device).eval()
+        m.depth_head = None
+        m.track_head = None
+        images = images.cpu()
+        with torch.no_grad():
+            pred = m(images)
 
     extr, _ = pose_encoding_to_extri_intri(pred["pose_enc"].float(), images.shape[-2:])
     extr = extr[0].cpu().numpy()
     pts = pred["world_points"][0].float().cpu().numpy().reshape(-1, 3)
     conf = pred["world_points_conf"][0].float().cpu().numpy().reshape(-1)
     rgb = images.permute(0, 2, 3, 1).float().cpu().numpy().reshape(-1, 3)
+    del pred, images
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     s, R, T = align_sim3([(e[:3, :3], e[:3, 3]) for e in extr], [(c.R, c.t) for c in cams])
     xyz = s * (pts @ R.T) + T

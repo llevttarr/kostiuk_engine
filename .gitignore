@@ -10,6 +10,7 @@ __pycache__/
 data/
 results/*
 !results/results.csv
+!results/results_final.csv
 cache/
 external/*
 !external/.gitkeep
