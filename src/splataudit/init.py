@@ -204,7 +204,9 @@ def foundation_init(scene, train_ids, max_points=100_000, conf_quantile=0.5):
         m = VGGT.from_pretrained(VGGT_MODEL).to(device).eval()
         m.depth_head = None
         m.track_head = None
-        if getattr(m, "point_head", None) is not None and hasattr(m.point_head, "frames_chunk_size"):
+        if getattr(m, "point_head", None) is not None and hasattr(
+            m.point_head, "frames_chunk_size"
+        ):
             m.point_head.frames_chunk_size = 2
         _VGGT_CACHE[device] = m
     model = _VGGT_CACHE[device]

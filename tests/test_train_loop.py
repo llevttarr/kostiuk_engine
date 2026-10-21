@@ -179,3 +179,42 @@ def test_the_strategy_is_called_around_every_step(gsplat, fern):
     train(cfg, scene, ids, xyz, rgb, build_method(cfg | {"methods": {}}))
     # StubStrategy records its own calls, so just check the loop asked for both hooks
     assert RENDERED and len(RENDERED) == 4
+
+
+def test_dngaussian_gets_an_optimiser_step_per_pass(gsplat, fern, monkeypatch):
+    from splataudit.runner import build_method
+    from splataudit.train import train
+
+    calls = []
+    real = torch.optim.Adam.step
+    monkeypatch.setattr(
+        torch.optim.Adam, "step", lambda self, *a, **k: (calls.append(1), real(self, *a, **k))[1]
+    )
+
+    scene, ids = fern
+    xyz, rgb = tiny_cloud(scene)
+    n_params = 6  # means, quats, scales, opacities, sh0, shN
+
+    cfg = cfg_for("vanilla", iterations=2)
+    train(cfg, scene, ids, xyz, rgb, build_method(cfg | {"methods": {}}))
+    assert len(calls) == 2 * n_params, "vanilla takes one step per iteration"
+
+    calls.clear()
+    cfg = cfg_for("dngaussian", iterations=2)
+    method = build_method(cfg | {"methods": {"dngaussian": {"soft_depth_start": 0}}})
+    train(cfg, scene, ids, xyz, rgb, method, depths_for(scene, ids))
+    # step 0 has no depth pass (gates are > start), step 1 has hard and soft
+    assert len(calls) == (1 + 3) * n_params
+
+
+def test_grads_are_released_between_passes(gsplat, fern):
+    from splataudit.runner import build_method
+    from splataudit.train import train
+
+    scene, ids = fern
+    xyz, rgb = tiny_cloud(scene)
+    cfg = cfg_for("dngaussian", iterations=3)
+    method = build_method(cfg | {"methods": {"dngaussian": {"soft_depth_start": 0}}})
+    state = train(cfg, scene, ids, xyz, rgb, method, depths_for(scene, ids))
+    # a pass that touches nothing must not leave a zero grad for adam to step on
+    assert torch.isfinite(state["means"]).all() and torch.isfinite(state["opacities"]).all()

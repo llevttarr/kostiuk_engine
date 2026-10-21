@@ -41,7 +41,7 @@ PYTHONPATH=src python -m splataudit sweep
 PYTHONPATH=src python -m splataudit sweep --gpus 0 1 --notify kostiuk_splataudit
 PYTHONPATH=src python -m splataudit report --results results/results.csv
 
-# tests (164, all cpu)
+# tests (170, all cpu)
 python -m pytest
 ```
 

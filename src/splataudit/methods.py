@@ -25,6 +25,10 @@ class Method:
         """{name: scalar tensor} added to the photometric loss."""
         return {}
 
+    def extra_passes(self, batch, step):
+        """[(name, fn(act) -> scalar)] each getting its own backward and optimiser step, in order."""
+        return []
+
     def densify_mask(self, grads, state, step):
         """(N,) bool mask of gaussians allowed to densify, or None for all of them."""
         return None
@@ -109,17 +113,32 @@ class DNGaussian(Method):
         self.rng = np.random.default_rng([c.get("seed", 0), 0xD9])
 
     def extra_loss(self, render, batch, step):
-        prior = batch["depth"]
-        assert prior is not None, "dngaussian needs a cached depth prior for this view"
-        act = batch["act"]
+        # only the penalties ride along with the photometric loss, as in train_llff.py.
+        # the depth losses get their own passes: summed in, they are ~8x the photometric
+        # term and the optimiser stops fitting the images (measured 2026-10-21)
+        assert batch["depth"] is not None, "dngaussian needs a cached depth prior for this view"
+        return {"dn_reg": self.penalties(batch["act"])}
+
+    def extra_passes(self, batch, step):
+        render = batch["render"]
         # patch normalisation cancels any affine change, so negating is their 255 - disparity
-        target = -norm01(prior)
-        out = {"dn_reg": self.penalties(act)}
+        target = -norm01(batch["depth"])
+        passes = []
         if step > self.hard_from:
-            out["dn_hard"] = self.depth_loss(batch["render"](self.hard(act))["depth"], target, step)
+            passes.append(
+                (
+                    "dn_hard",
+                    lambda act: self.depth_loss(render(self.hard(act))["depth"], target, step),
+                )
+            )
         if step > self.soft_from:
-            out["dn_soft"] = self.depth_loss(batch["render"](self.soft(act))["depth"], target, step)
-        return out
+            passes.append(
+                (
+                    "dn_soft",
+                    lambda act: self.depth_loss(render(self.soft(act))["depth"], target, step),
+                )
+            )
+        return passes
 
     def hard(self, act):
         """Geometry-only view: opacity pinned high, white colours, scales and rotations detached."""

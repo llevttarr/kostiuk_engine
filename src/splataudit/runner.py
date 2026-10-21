@@ -23,7 +23,7 @@ from splataudit.utils import (
 )
 
 RUN_MINUTES = {"llff": 4.0, "dtu": 3.0, "mip360": 8.0}
-METHOD_COST = {"vanilla": 1.0, "dropgaussian": 1.05, "fsgs": 1.1, "dngaussian": 2.6}
+METHOD_COST = {"vanilla": 1.0, "dropgaussian": 1.05, "fsgs": 1.1, "dngaussian": 3.5}
 
 
 def load_config(path):

@@ -128,21 +128,44 @@ def test_fsgs_requires_a_prior():
         M.build("fsgs").extra_loss(fake_render(act), b, 0)
 
 
-def test_dngaussian_terms_switch_on_at_their_gates():
+def test_dngaussian_keeps_the_depth_losses_out_of_the_summed_loss():
+    # they are ~8x the photometric term, so summing them stops the renderer fitting images
+    act = gaussians()
+    m = M.build("dngaussian", {"dataset": "llff"})
+    assert set(m.extra_loss(fake_render(act), batch(act), 5000)) == {"dn_reg"}
+
+
+def test_dngaussian_passes_switch_on_at_their_gates():
     act = gaussians()
     m = M.build("dngaussian", {"dataset": "llff", "soft_depth_start": 1000})
     b = batch(act)
-    assert set(m.extra_loss(fake_render(act), b, 1)) == {"dn_reg", "dn_hard"}
-    assert set(m.extra_loss(fake_render(act), b, 2000)) == {"dn_reg", "dn_hard", "dn_soft"}
+    assert [n for n, _ in m.extra_passes(b, 0)] == []
+    assert [n for n, _ in m.extra_passes(b, 1)] == ["dn_hard"]
+    assert [n for n, _ in m.extra_passes(b, 2000)] == ["dn_hard", "dn_soft"]
 
 
-def test_dngaussian_gradients_reach_means_and_opacities():
-    act = gaussians()
-    m = M.build("dngaussian", {"dataset": "llff"})
-    loss = sum(m.extra_loss(fake_render(act), batch(act), 2000).values())
-    loss.backward()
-    assert act["means"].grad is not None and act["means"].grad.abs().sum() > 0
-    assert act["opacities"].grad is not None and act["opacities"].grad.abs().sum() > 0
+def test_only_dngaussian_asks_for_separate_passes():
+    for name in ("vanilla", "fsgs", "dropgaussian"):
+        act = gaussians()
+        assert M.build(name, {"dataset": "llff"}).extra_passes(batch(act), 5000) == []
+
+
+def test_dngaussian_hard_pass_moves_geometry_and_soft_pass_moves_opacity():
+    m = M.build("dngaussian", {"dataset": "llff", "soft_depth_start": 0})
+    grads = {}
+    for name, fn in m.extra_passes(batch(gaussians()), 2000):
+        act = gaussians()
+        fn(act).backward()
+        grads[name] = {
+            k: None if v.grad is None else float(v.grad.abs().sum())
+            for k, v in act.items()
+            if v.requires_grad
+        }
+
+    assert grads["dn_hard"]["means"] > 0, "hard depth must move the geometry"
+    assert not grads["dn_hard"]["opacities"], "hard depth pins opacity, so it must not move it"
+    assert grads["dn_soft"]["opacities"] > 0, "soft depth must move opacity"
+    assert not grads["dn_soft"]["means"], "soft depth detaches the means"
 
 
 def test_dngaussian_patch_range_follows_the_dataset():

@@ -143,13 +143,18 @@ def train(
                 # means2d.grad is (C, N, 2) with packed=False; dmask is (N,)
                 info["means2d"].grad[:, ~dmask] = 0.0
 
-        for opt in optimizers.values():
-            opt.step()
-            opt.zero_grad()
+        _step(optimizers)
 
         # Exponential LR decay for means: 1.6e-4 → 1.6e-6 (× scene scale) over all iterations
         lr_means = 1.6e-4 * (1.6e-6 / 1.6e-4) ** (step / tc["iterations"]) * scene_scale
         _set_lr(optimizers["means"], lr_means)
+
+        # Methods whose objective is not one additive loss (DNGaussian) get a backward and
+        # an optimiser step per pass, re-activating the Gaussians the previous pass moved.
+        for _, loss_fn in method.extra_passes(batch, step):
+            extra = loss_fn(_activate(params))
+            extra.backward()
+            _step(optimizers)
 
         strategy.step_post_backward(params, optimizers, strategy_state, step, info)
 
@@ -169,6 +174,13 @@ def train(
         "sh_degree": tc["sh_degree"],
         "n_gaussians": params["means"].shape[0],
     }
+
+
+def _step(optimizers):
+    """One optimiser step, releasing the grads so a later pass only moves what it touched."""
+    for opt in optimizers.values():
+        opt.step()
+        opt.zero_grad(set_to_none=True)
 
 
 def _activate(params):
